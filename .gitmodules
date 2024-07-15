@@ -1,0 +1,3 @@
+[submodule "tool/bitfield"]
+	path = tool/bitfield
+	url = https://github.com/Arth-ur/bitfield
