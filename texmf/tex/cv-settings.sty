@@ -1,0 +1,39 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{cv-settings}[2023-08-31 v0.1 resume cv settings]
+
+\RequirePackage{kvoptions}
+\RequirePackage{etoolbox}
+
+\SetupKeyvalOptions{family=cvsets,prefix=cvsets@,setkeys=\kvsetkeys}
+
+% set ctex font
+\DeclareStringOption[adobe]{fontset}
+
+\DeclareDefaultOption{\PassOptionsToClass{\CurrentOption}{ctex}}
+
+\ProcessKeyvalOptions*\relax
+
+\RequirePackage{xcolor}
+
+\RequirePackage[
+  UTF8,
+  scheme = plain,
+  fontset = \cvsets@fontset,
+  linespread=1.3,
+]{ctex}
+
+\ctexset{
+  linestretch = 5,
+}
+
+% adjust the page margins
+\RequirePackage[
+  left=1.5cm, right=1.5cm,
+  top=2cm,bottom=2cm,
+]{geometry}
+
+\RequirePackage{setspace}
+
+\setmainfont{Times New Roman}
+
+\endinput
