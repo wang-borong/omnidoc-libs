@@ -1,0 +1,39 @@
+---
+documentclass: elegantpaper
+papersize: a4
+classoption:
+  - cn
+indent: true
+listings: true
+numbersections:
+  - sectiondepth: 5
+biblatex: [biblio/cs.bib]
+nocite: |
+  @*
+colorlinks: true
+graphics: true
+
+include-before:
+  - |
+    ```{=latex}
+    ```
+
+toc: true
+toc-title: \begin{center}目\quad 录\end{center}
+lof: true
+lot: true
+
+include-after:
+  - |
+    ```{=latex}
+    ```
+before-body:
+  - |
+    ```{=latex}
+    ```
+after-body:
+  - |
+    ```{=latex}
+    ```
+...
+

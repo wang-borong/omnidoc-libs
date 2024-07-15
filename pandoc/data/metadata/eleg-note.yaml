@@ -1,0 +1,40 @@
+---
+documentclass: elegantnote
+papersize: a4
+classoption:
+  - cn
+  - device=normal
+indent: true
+listings: true
+numbersections:
+  - sectiondepth: 5
+biblatex: [biblio/cs.bib]
+nocite: |
+  @*
+#colorlinks: true
+graphics: true
+
+include-before:
+  - |
+    ```{=latex}
+    ```
+
+toc: true
+# toc-title: \begin{center}目\quad 录\end{center}
+lof: false
+lot: false
+
+include-after:
+  - |
+    ```{=latex}
+    ```
+before-body:
+  - |
+    ```{=latex}
+    ```
+after-body:
+  - |
+    ```{=latex}
+    ```
+...
+
