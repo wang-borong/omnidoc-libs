@@ -1,5 +1,8 @@
 PANDOC := pandoc
 
+XDG_DATA_DIR ?= $(HOME)/.local/share
+OMNIDOC_LIB  ?= $(XDG_DATA_DIR)/omnidoc
+
 PANDOC_OPTS := -f markdown+east_asian_line_breaks+footnotes \
 			   --lua-filter=include-code-files.lua \
 			   --lua-filter=include-files.lua \
@@ -9,26 +12,17 @@ PANDOC_OPTS := -f markdown+east_asian_line_breaks+footnotes \
 			   --lua-filter=latex-patch.lua \
 			   --lua-filter=fonts-and-alignment.lua \
 			   -F pandoc-crossref \
-			   -M "crossrefYaml=pandoc/crossref.yaml" \
+			   -M "crossrefYaml=$(OMNIDOC_LIB)/pandoc/crossref.yaml" \
 			   --citeproc \
 			   --pdf-engine=xelatex \
 			   --listings \
-			   --data-dir=pandoc/data \
+			   --data-dir=$(OMNIDOC_LIB)/pandoc/data \
 			   --standalone \
 			   --embed-resources \
-			   --resource-path=.:pandoc/csl:image:images:figure:figures:biblio
+			   --resource-path=.:$(OMNIDOC_LIB)/pandoc/csl:image:images:figure:figures:biblio
 
-PANDOC_VER := $(shell $(PANDOC) -v | head -1 | awk '{print $$2}' \
-			  | sed -E -e 's/\.//g' -e 's/([0-9])(.*)/\1\.\2/' \
-			  | awk '{printf "%.03f", $$1}' | sed 's/\.//g')
-PANDOC_GTEAT_THAN_3_1_7 := $(shell echo "$(PANDOC_VER) 3107" \
-						   | awk '{if($$1>=$$2) {print 1} else {print 0}}')
-
-ifeq ($(PANDOC_GTEAT_THAN_3_1_7),1)
-	PANDOC_OPTS += --template=pantext.latex
-else
-	PANDOC_OPTS += --template=pantext-3107-.latex
-endif
+# Sorry, we only support the lastest release pandoc
+PANDOC_OPTS += --template=pantext.latex
 
 ifneq ($(METADATA_FILE),)
 	PANDOC_OPTS += --metadata-file=$(METADATA_FILE).yaml
