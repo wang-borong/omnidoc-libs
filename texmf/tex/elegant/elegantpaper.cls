@@ -82,7 +82,9 @@
 \RequirePackage{hologo}
 
 \linespread{1.35}
+\RequirePackage{helper}
 \graphicspath{
+  {\globimagepath/}
   {image/}{images/}
   {figure/}{figures/}
   {graphic/}{graphics/}

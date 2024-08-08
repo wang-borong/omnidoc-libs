@@ -283,10 +283,12 @@
 }{\relax}
 
 
+\RequirePackage{helper}
 % graphics path
 \graphicspath{
   {./figure/}
   {./figures/}
+  {\globimagepath/}
   {./image/}
   {./images/}
   {./graphics/}

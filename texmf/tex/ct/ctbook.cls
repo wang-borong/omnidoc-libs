@@ -148,12 +148,14 @@
   {”}{{''}}1
 }
 
+\RequirePackage{helper}
 % graphics path
 \graphicspath{
   {./diagram/}
   {./diagrams/}
   {./figure/}
   {./figures/}
+  {\globimagepath/}
   {./image/}
   {./images/}
   {./graphics/}
