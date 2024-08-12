@@ -27,6 +27,9 @@ PANDOC_OPTS += --template=pantext.latex
 ifneq ($(METADATA_FILE),)
 	PANDOC_OPTS += --metadata-file=$(METADATA_FILE).yaml
 endif
+ifneq ($(V),)
+	PANDOC_OPTS += --verbose
+endif
 
 TARGET ?= $(shell basename $$PWD)
 
@@ -49,4 +52,4 @@ countword: $(SRCS)
 format: $(SRCS)
 	@$(CONTFORM) --markdown $^
 
-.PHONY: all $(TARGET).pdf
+.PHONY: all $(TARGET).pdf tex
