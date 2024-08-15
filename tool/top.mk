@@ -35,7 +35,7 @@ all: $(BUILDIR)
 	@if [[ ${MAIN} == "main.md" ]]; then $(TOPMAKE) pandoc; else $(TOPMAKE) latex; fi
 
 latex: $(BUILDIR)/$(TARGET).tex
-	@if [[ ! -d figures ]]; then $(TOPMAKE) figures; fi
+	@if [[ ! -z $$(ls -A $(FIGSRC) $(SVGSRC) > /dev/null 2>&1) ]]; then $(TOPMAKE) figures; fi
 	@$(LATEXMK) $(TEXOPTS) $< || $(LATEXMK) -c $<
 
 pandoc: $(BUILDIR)
