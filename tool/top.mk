@@ -67,8 +67,7 @@ kill-view:
 	@kill $$(ps aux | grep $(TARGET).pdf \
 		| head -1 | awk '{print $$2}')
 
-clean: $(BUILDIR)/$(TARGET).pdf
-	@$(RM) $<
+clean:
 	@if [[ ${MAIN} == main.tex ]]; then\
 		$(LATEXMK) $(TEXOPTS) -c;\
 	fi
