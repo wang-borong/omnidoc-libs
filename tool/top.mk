@@ -27,6 +27,7 @@ FIGSRC += $(wildcard dac/*)
 SVGSRC := $(wildcard figure/*.svg)
 
 TARGET ?= unknown
+TEXOPTS += -jobname=$(TARGET)
 
 export TEXMFHOME=$(OMNIDOC_LIB)/texmf
 export TARGET CONTFORM BUILDIR METADATA_FILE XDG_DATA_DIR OMNIDOC_LIB
@@ -34,15 +35,12 @@ export TARGET CONTFORM BUILDIR METADATA_FILE XDG_DATA_DIR OMNIDOC_LIB
 all: $(BUILDIR)
 	@if [[ ${MAIN} == "main.md" ]]; then $(TOPMAKE) pandoc; else $(TOPMAKE) latex; fi
 
-latex: $(BUILDIR)/$(TARGET).tex
+latex: $(MAIN)
 	@if [[ ! -z $$(ls -A $(FIGSRC) $(SVGSRC) > /dev/null 2>&1) ]]; then $(TOPMAKE) figures; fi
 	@$(LATEXMK) $(TEXOPTS) $< || $(LATEXMK) -c $<
 
 pandoc: $(BUILDIR)
 	@make -f $(PANDOCMK) V=$(V)
-
-$(BUILDIR)/$(TARGET).tex: $(MAIN) $(BUILDIR)
-	@if [[ ! -f $@ ]]; then ln -sf ../$< $@; fi
 
 pandoc-tex: $(BUILDIR)
 	@make -f $(PANDOCMK) V=$(V) tex
@@ -71,7 +69,9 @@ kill-view:
 
 clean: $(BUILDIR)/$(TARGET).pdf
 	@$(RM) $<
-	@if [[ ${MAIN} == main.tex ]]; then $(LATEXMK) -c main.tex; fi
+	@if [[ ${MAIN} == main.tex ]]; then\
+		$(LATEXMK) $(TEXOPTS) -c;\
+	fi
 
 dist-clean:
 	@$(RM) -r $(OUTDIR) auto \
