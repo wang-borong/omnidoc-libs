@@ -67,10 +67,9 @@ if ((not defined $ENV{"TEXINPUTS"}) or ($ENV{"TEXINPUTS"} eq "")) {
 
 $clean_ext = 'synctex.gz';
 
+# Make it compatible with sphinx
 if (defined $ENV{OUTDIR}) {
 	$out_dir = $ENV{OUTDIR};
-} else {
-	$out_dir = "build";
 }
 
 $pdf_update_method = 2;
