@@ -9,11 +9,13 @@ import base64
 import requests
 import argparse
 import subprocess
+from multiprocessing import Pool
 
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 
 def shelldo(cmd):
-    subprocess.call(cmd, shell=True)
-
+    subprocess.run(cmd, shell=True, check=True)
 
 def check_file_existence(file_path):
     return os.path.exists(file_path) and os.path.isfile(file_path)
@@ -42,6 +44,15 @@ class Drawio():
                 pass
         return diagnames
 
+    def _convert(self, args):
+        cmd = f'{args[0]} --export --format {args[1]} --page-index {args[2]} ' \
+            f'{args[3]} --output {args[4]} {args[5]} >/dev/null 2>&1'
+        try:
+            subprocess.run(cmd, shell=True, check=True)
+            print(f'{args[5]} [P{args[2]}] -> {args[4]}')
+        except:
+            eprint(f'Convert {args[5]} [P{args[2]}] failed')
+
     def conv_to(self, diofile,  tgtpath, type='pdf', force=False):
         diofn = os.path.basename(diofile).replace('.drawio', '')
         diopath = os.path.dirname(diofile)
@@ -53,16 +64,17 @@ class Drawio():
             print('drawio can not convert to {}'.format(type))
             exit(1)
         diagnames = self._get_diagram_names(diofile)
-        for i in range(0, len(diagnames)):
-            addopt = '--crop' if type == 'pdf' else ''
-            fig_path = '{}/{}{}.{}'.format(tgtpath, diofn,
-                                           diagnames[i], type)
-            if check_file_existence(fig_path) and not force:
-                continue
-            drawio_conv_cmd = '{} --export --format {} --page-index {} ' \
-                '{} --output {} {}'.format(self.appath, type, i,
-                                           addopt, fig_path, diofile)
-            shelldo(drawio_conv_cmd)
+        addopt = '--crop' if type == 'pdf' else ''
+
+        fig_paths = [f'{tgtpath}/{diofn}{diagname}.{type}' for diagname in diagnames]
+        cmds = [[self.appath, type, i, addopt, fig_paths[i], diofile] if not
+            check_file_existence(fig_paths[i]) or force else [] for i in range(0, len(diagnames))]
+        cmdslice = [cmds[i:i + 8] for i in range(0, len(cmds), 8)]
+
+        with Pool(processes=8) as p:
+            for cmdpart in cmdslice:
+                result = p.map_async(self._convert, cmdpart)
+                result.get(timeout=3)
 
 
 class Gradot():
