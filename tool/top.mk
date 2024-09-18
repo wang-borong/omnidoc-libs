@@ -23,8 +23,9 @@ MAIN ?= $(shell ls main.*)
 TEXES := $(shell find . -name "*.tex" | sort)
 
 FIGSRC := $(wildcard drawio/*.drawio)
-FIGSRC += $(wildcard dac/*)
-SVGSRC := $(wildcard figure/*.svg)
+FIGSRC += $(wildcard dac/*.dot dac/*.mmd)
+BFSRC  := $(wildcard dac/*.json)
+SVGSRC := $(wildcard figure/*.svg figures/*.svg)
 
 TARGET ?= unknown
 TEXOPTS += -jobname=$(TARGET)
@@ -32,7 +33,7 @@ TEXOPTS += -jobname=$(TARGET)
 export TEXMFHOME=$(OMNIDOC_LIB)/texmf
 export TARGET CONTFORM BUILDIR METADATA_FILE XDG_DATA_DIR OMNIDOC_LIB
 
-all: $(BUILDIR)
+all: $(BUILDIR) figures
 	@if [[ ${MAIN} == "main.md" ]]; then $(TOPMAKE) pandoc; else $(TOPMAKE) latex; fi
 
 latex: $(MAIN)
@@ -49,11 +50,17 @@ format: $(TEXES)
 	@$(CONTFORM) $^
 	@make -f $(PANDOCMK) format
 
-figures: $(FIGSRC) $(SVGSRC)
+figures: $(FIGSRC) $(BFSRC) $(SVGSRC)
 	@mkdir -p figures
-	@$(FIGENERATOR) $(FIGSRC)
-	@for json in dac/*.json; do $(BITFIELD) --fontsize=9 $$json figures/$$(basename $${json%%.*}).svg; done
-	@$(FIGENERATOR) -c $(SVGSRC) figures/*.svg
+	@if [[ -n "$(FIGSRC)" ]]; then \
+		$(FIGENERATOR) $(FIGSRC); \
+	fi
+	@for bf in $(BFSRC); do \
+		$(BITFIELD) --fontsize=9 $$bf figures/$$(basename $${bf%%.*}).svg; \
+	done
+	@if [[ -n "$(SVGSRC)" ]]; then \
+		$(FIGENERATOR) -c $(SVGSRC); \
+	fi
 
 latex-view: latex
 	@$(LATEXMK) -f -pvc -view=pdf $(BUILDIR)/$(TARGET) $(NOINFO) &
@@ -72,7 +79,7 @@ clean:
 		$(LATEXMK) $(TEXOPTS) -c;\
 	fi
 
-dist-clean:
+dist-clean: clean-figures
 	@$(RM) -r $(OUTDIR) auto \
 		*.aux *.log *.out *.pdf *.synctex.gz *.toc
 
