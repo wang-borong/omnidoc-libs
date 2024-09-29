@@ -31,6 +31,8 @@ ifneq ($(V),)
 	PANDOC_OPTS += --verbose
 endif
 
+PANDOC_OPTS += $(OMNI_PANDOC_OPTS)
+
 TARGET ?= $(shell basename $$PWD)
 
 # Add a '_' to a markdown file name to remove it temporarily.
