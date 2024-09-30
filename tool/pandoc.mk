@@ -37,7 +37,7 @@ TARGET ?= $(shell basename $$PWD)
 
 # Add a '_' to a markdown file name to remove it temporarily.
 #SRCS := $(shell find md -regextype sed -regex '.*[^_]c[0-9a-b]\{2\}s[0-9a-b]\{2\}-.*\.md' | sort)
-SRCS := main.md
+SRCS := $(MAIN)
 
 all: $(TARGET).pdf
 

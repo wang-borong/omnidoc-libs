@@ -31,10 +31,10 @@ TARGET ?= unknown
 TEXOPTS += -jobname=$(TARGET)
 
 export TEXMFHOME=$(OMNIDOC_LIB)/texmf
-export TARGET CONTFORM BUILDIR METADATA_FILE XDG_DATA_DIR OMNIDOC_LIB OMNI_PANDOC_OPTS
+export TARGET CONTFORM BUILDIR METADATA_FILE XDG_DATA_DIR OMNIDOC_LIB OMNI_PANDOC_OPTS MAIN
 
 all: $(BUILDIR) figures
-	@if [[ ${MAIN} == "main.md" ]]; then $(TOPMAKE) pandoc; else $(TOPMAKE) latex; fi
+	@if [[ ${MAIN} == *".md" ]]; then $(TOPMAKE) pandoc; else $(TOPMAKE) latex; fi
 
 latex: $(MAIN)
 	@if [[ ! -z $$(ls -A $(FIGSRC) $(SVGSRC) > /dev/null 2>&1) ]]; then $(TOPMAKE) figures; fi
