@@ -70,15 +70,15 @@ local function proc_image(image)
 
   local cmd = string.format(
     'find . -type d %s %s -o -name "%s*" -print | sed "/.svg/d"',
-    '\\( -name appendix -o -name diagascode -o -name drawio -o -name pandoc',
+    '\\( -name appendix -o -name dac -o -name drawio -o -name pandoc',
     '-o -name reference -o -name texmf -o -name tool -o -name .git \\) -prune',
     image.src:match("[^/]*$"))
   -- logging.output('cmd:', cmd)
   local output = execute_command(cmd)
   if output == '' then return image end
   -- logging.output('out:', output)
-  -- Extracts the part after the last '/' and strip the \n
-  local img_name = output:match("^.+/(.*/.+)$"):gsub("\n$", "")
+  -- Extracts basename of the found path
+  local img_name = output:gsub("(.*/)(.*)", "%2"):gsub("\n$", "")
   -- logging.output('img_name:', img_name)
 
   if check_file_ext(img_name, legal_ext) then
