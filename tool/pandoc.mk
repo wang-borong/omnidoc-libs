@@ -4,8 +4,8 @@ XDG_DATA_DIR ?= $(HOME)/.local/share
 OMNIDOC_LIB  ?= $(XDG_DATA_DIR)/omnidoc
 
 PANDOC_OPTS := -f markdown+east_asian_line_breaks+footnotes \
-			   --lua-filter=include-code-files.lua \
 			   --lua-filter=include-files.lua \
+			   --lua-filter=include-code-files.lua \
 			   --lua-filter=diagram-generator.lua \
 			   --metadata=pythonPath:"python3" \
 			   --lua-filter=ltblr.lua \

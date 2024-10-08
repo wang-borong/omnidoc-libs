@@ -10,11 +10,11 @@ end
 
 --- Filter function for code blocks
 local function transclude (cb)
-  if cb.attributes.include then
+  if cb.attributes['include-code'] then
     local content = ""
-    local fh = io.open(cb.attributes.include)
+    local fh = io.open(cb.attributes['include-code'])
     if not fh then
-      io.stderr:write("Cannot open file " .. cb.attributes.include .. " | Skipping includes\n")
+      io.stderr:write("Cannot open file " .. cb.attributes['include-code'] .. " | Skipping includes\n")
     else
       local number = 1
       local start = 1
@@ -44,11 +44,11 @@ local function transclude (cb)
           end
         end
         number = number + 1
-      end 
+      end
       fh:close()
-    end     
+    end
     -- remove key-value pair for used keys
-    cb.attributes.include = nil
+    cb.attributes['include-code'] = nil
     cb.attributes.startLine = nil
     cb.attributes.endLine = nil
     cb.attributes.dedent = nil
