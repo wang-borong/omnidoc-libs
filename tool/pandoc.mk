@@ -12,7 +12,6 @@ PANDOC_OPTS := -f markdown+east_asian_line_breaks+footnotes \
 			   --lua-filter=latex-patch.lua \
 			   --lua-filter=fonts-and-alignment.lua \
 			   -F pandoc-crossref \
-			   -M "crossrefYaml=$(OMNIDOC_LIB)/pandoc/crossref.yaml" \
 			   --citeproc \
 			   --pdf-engine=xelatex \
 			   --listings \
@@ -24,6 +23,9 @@ PANDOC_OPTS := -f markdown+east_asian_line_breaks+footnotes \
 # Sorry, we only support the lastest release pandoc
 PANDOC_OPTS += --template=pantext.latex
 
+ifneq ($(PANDOC_LANG), en)
+	PANDOC_OPTS += -M "crossrefYaml=$(OMNIDOC_LIB)/pandoc/crossref.yaml"
+endif
 ifneq ($(METADATA_FILE),)
 	PANDOC_OPTS += --metadata-file=$(METADATA_FILE).yaml
 endif
