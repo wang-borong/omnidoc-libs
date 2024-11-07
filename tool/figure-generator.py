@@ -248,7 +248,11 @@ if __name__ == "__main__":
                 Immcvt(args.imagemagick).conv_to(others, args.output, args.format, args.force)
 
     if drawios:
-        Drawio(args.drawio).conv_to(drawios, args.output, args.format, args.force)
+        args_drawio = args.drawio
+        if not os.path.exists(args_drawio):
+            res = subprocess.run(['whereis', '-b', 'drawio'], capture_output = True, text = True)
+            args_drawio = res.stdout.replace('drawio: ', '').strip()
+        Drawio(args_drawio).conv_to(drawios, args.output, args.format, args.force)
             
     if dotfiles:
         Gradot(args.gradot).conv_to(dotfiles, args.output, args.format, args.force)
