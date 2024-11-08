@@ -78,7 +78,7 @@ local function proc_image(image)
   if output == '' then return image end
   -- logging.output('out:', output)
   -- Extracts basename of the found path
-  local img_name = output:gsub("(.*/)(.*)", "%2"):gsub("\n$", "")
+  local img_name = output:gsub("%./.-/(.*)", "%1"):gsub("\n$", "")
   -- logging.output('img_name:', img_name)
 
   if check_file_ext(img_name, legal_ext) then
