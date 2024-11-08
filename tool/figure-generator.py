@@ -200,7 +200,7 @@ def cli():
     parser.add_argument('-o', '--output', type=str, default='figures',
                         help='output path, default is the figures directory'
                         ' in current working directory')
-    parser.add_argument('source', nargs='+',
+    parser.add_argument('source', nargs='*',
                         help='the drawio source files')
     args = parser.parse_args()
 
@@ -244,7 +244,7 @@ if __name__ == "__main__":
             others = [f for f in figs if '.svg' not in f]
             if svgs:
                 Inkcvt(args.inkscape).conv_to(svgs, args.output, args.format, args.force)
-            else:
+            if others:
                 Immcvt(args.imagemagick).conv_to(others, args.output, args.format, args.force)
 
     if drawios:
