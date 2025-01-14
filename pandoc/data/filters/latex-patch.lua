@@ -74,15 +74,17 @@ local function proc_image(image)
     '-o -name reference -o -name texmf -o -name tool -o -name .git \\) -prune',
     image.src:match("[^/]*$"))
   -- logging.output('cmd:', cmd)
-  local output = execute_command(cmd)
+  local output = execute_command(cmd):gsub("\n$", "")
   if output == '' then return image end
   -- logging.output('out:', output)
-  -- Extracts basename of the found path
-  local img_name = output:gsub("%./.-/(.*)", "%1"):gsub("\n$", "")
-  -- logging.output('img_name:', img_name)
-
-  if check_file_ext(img_name, legal_ext) then
-    image.src = img_name
+  for img_name in output:gmatch("([^\n]*)\n?") do
+    if string.find(img_name, image.src:gsub("%-", "%%-")) then
+      img_name = img_name:gsub("%./.-/(.*)", "%1")
+      if check_file_ext(img_name, legal_ext) then
+        image.src = img_name
+      end
+      break
+    end
   end
 
   return image
