@@ -321,3 +321,5 @@ figures
 *~
 *.drawio.dtmp
 *.mod
+*.pdf
+!figure/*.pdf
