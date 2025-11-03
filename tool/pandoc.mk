@@ -14,7 +14,7 @@ PANDOC_OPTS := -f markdown+east_asian_line_breaks+footnotes \
 			   -F pandoc-crossref \
 			   --citeproc \
 			   --pdf-engine=xelatex \
-			   --listings \
+			   --syntax-highlighting=idiomatic \
 			   --data-dir=$(OMNIDOC_LIB)/pandoc/data \
 			   --standalone \
 			   --embed-resources \
