@@ -96,9 +96,9 @@ local function update_contents(blocks, shift_by, include_path)
   local update_contents_filter = {
     -- Shift headings in block list by given number
     Header = function(header)
-      if shift_by and shift_by > 0 then
-        -- Ensure heading level doesn't exceed 6 (max heading level in Markdown)
-        local new_level = math.min(header.level + shift_by, 6)
+      if shift_by and shift_by ~= 0 then
+        -- Ensure heading level stays within 1-6 range (valid heading levels in Markdown)
+        local new_level = math.max(1, math.min(header.level + shift_by, 6))
         header.level = new_level
       end
       return header
