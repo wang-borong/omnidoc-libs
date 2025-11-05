@@ -1,95 +1,126 @@
 --[[
-diagram-generator – create images and figures from code blocks.
+diagram-generator.lua – Create images and figures from code blocks
 
-This Lua filter is used to create images with or without captions
-from code blocks. Currently PlantUML, GraphViz, Tikz, and Python
-can be processed. For further details, see README.md.
+This Lua filter converts code blocks with specific classes into images or figures.
+It supports multiple diagram generation engines:
+  - PlantUML: UML diagrams and flowcharts
+  - GraphViz: Graph visualization (dot, neato, etc.)
+  - TikZ: LaTeX graphics
+  - Python: Custom image generation scripts
+  - Asymptote: Mathematical graphics
+
+Features:
+  - Automatic format selection based on output format (SVG, PNG, PDF)
+  - Support for figure captions and cross-references
+  - Configurable tool paths via metadata or environment variables
+  - Automatic file caching using content hashing
+  - Media bag integration for embedded resources
+
+Usage:
+  ```{.plantuml caption="UML Diagram"}
+  @startuml
+  Alice -> Bob: Hello
+  @enduml
+  ```
+
+  ```{.graphviz caption="Graph"}
+  digraph G {
+    A -> B
+  }
+  ```
+
+Metadata options:
+  - plantuml_path / plantumlPath: Path to PlantUML executable
+  - inkscape_path / inkscapePath: Path to Inkscape executable
+  - python_path / pythonPath: Path to Python executable
+  - activate_python_path / activatePythonPath: Python virtual environment activation script
+  - java_path / javaPath: Path to Java executable
+  - dot_path / dotPath: Path to Graphviz dot executable
+  - pdflatex_path / pdflatexPath: Path to pdflatex executable
+  - asymptote_path / asymptotePath: Path to Asymptote executable
 
 Copyright: © 2018-2021 John MacFarlane <jgm@berkeley.edu>,
-             2018 Florian Schätzig <florian@schaetzig.de>,
-             2019 Thorsten Sommer <contact@sommer-engineering.com>,
-             2019-2021 Albert Krewinkel <albert+pandoc@zeitkraut.de>
+           2018 Florian Schätzig <florian@schaetzig.de>,
+           2019 Thorsten Sommer <contact@sommer-engineering.com>,
+           2019-2021 Albert Krewinkel <albert+pandoc@zeitkraut.de>
 License:   MIT – see LICENSE file for details
 ]]
+
 -- Module pandoc.system is required and was added in version 2.7.3
 PANDOC_VERSION:must_be_at_least '2.7.3'
--- local logging = require("logging")
 
 local system = require 'pandoc.system'
 local utils = require 'pandoc.utils'
-local stringify = function (s)
-  return type(s) == 'string' and s or utils.stringify(s)
+
+-- ============================================================================
+-- Helper Functions
+-- ============================================================================
+
+--- Convert a value to string, handling both strings and pandoc objects
+--- @param s string|table The value to convert
+--- @return string The string representation
+local function stringify(s)
+  if type(s) == 'string' then
+    return s
+  end
+  return utils.stringify(s)
 end
+
+-- ============================================================================
+-- System Utilities
+-- ============================================================================
+
 local with_temporary_directory = system.with_temporary_directory
 local with_working_directory = system.with_working_directory
 
--- The PlantUML path. If set, uses the environment variable PLANTUML or the
--- value "plantuml.jar" (local PlantUML version). In order to define a
--- PlantUML version per pandoc document, use the meta data to define the key
--- "plantuml_path".
-local plantuml_path = os.getenv("PLANTUML") or "plantuml.jar"
+-- ============================================================================
+-- Configuration Variables
+-- ============================================================================
 
--- The Inkscape path. In order to define an Inkscape version per pandoc
--- document, use the meta data to define the key "inkscape_path".
+-- Tool paths (can be overridden via metadata or environment variables)
+local plantuml_path = os.getenv("PLANTUML") or "plantuml"
 local inkscape_path = os.getenv("INKSCAPE") or "inkscape"
-
--- The Python path. In order to define a Python version per pandoc document,
--- use the meta data to define the key "python_path".
 local python_path = os.getenv("PYTHON") or "python"
-
--- The Python environment's activate script. Can be set on a per document
--- basis by using the meta data key "activatePythonPath".
 local python_activate_path = os.getenv("PYTHON_ACTIVATE")
-
--- The Java path. In order to define a Java version per pandoc document,
--- use the meta data to define the key "java_path".
 local java_path = os.getenv("JAVA_HOME")
 if java_path then
-    java_path = java_path .. package.config:sub(1,1) .. "bin"
-        .. package.config:sub(1,1) .. "java"
+  java_path = java_path .. package.config:sub(1, 1) .. "bin" ..
+              package.config:sub(1, 1) .. "java"
 else
-    java_path = "java"
+  java_path = "java"
 end
-
--- The dot (Graphviz) path. In order to define a dot version per pandoc
--- document, use the meta data to define the key "dot_path".
 local dot_path = os.getenv("DOT") or "dot"
-
--- The pdflatex path. In order to define a pdflatex version per pandoc
--- document, use the meta data to define the key "pdflatex_path".
 local pdflatex_path = os.getenv("PDFLATEX") or "pdflatex"
+local asymptote_path = os.getenv("ASYMPTOTE") or "asy"
 
--- The asymptote path. There is also the metadata variable
--- "asymptote_path".
-local asymptote_path = os.getenv ("ASYMPTOTE") or "asy"
-
--- The default format is SVG i.e. vector graphics:
+-- Output format and MIME type
+-- Default is SVG (vector graphics), but changes based on output format
 local filetype = "svg"
 local mimetype = "image/svg+xml"
 
--- Check for output formats that potentially cannot use SVG
--- vector graphics. In these cases, we use a different format
--- such as PNG:
-if FORMAT == "docx" then
+-- Determine output format based on pandoc output format
+-- Some formats don't support SVG well, so we use PNG or PDF instead
+if FORMAT == "docx" or FORMAT == "pptx" or FORMAT == "rtf" then
   filetype = "png"
   mimetype = "image/png"
-elseif FORMAT == "pptx" then
-  filetype = "png"
-  mimetype = "image/png"
-elseif FORMAT == "rtf" then
-  filetype = "png"
-  mimetype = "image/png"
- -- use pdf type if output format is latex or pdf
 elseif FORMAT == "pdf" or FORMAT == "latex" then
   filetype = "pdf"
   mimetype = "application/pdf"
 end
 
--- Execute the meta data table to determine the paths. This function
--- must be called first to get the desired path. If one of these
--- meta options was set, it gets used instead of the corresponding
--- environment variable:
+-- ============================================================================
+-- Meta Processing
+-- ============================================================================
+
+--- Extract tool paths from document metadata
+---
+--- This function processes metadata to override default tool paths.
+--- Supports both hyphenated (plantuml_path) and camelCase (plantumlPath) names.
+---
+--- @param meta table The document metadata
+--- @return table|nil The metadata (or nil if unchanged)
 function Meta(meta)
+  -- Update tool paths from metadata if provided
   plantuml_path = stringify(
     meta.plantuml_path or meta.plantumlPath or plantuml_path
   )
@@ -99,8 +130,9 @@ function Meta(meta)
   python_path = stringify(
     meta.python_path or meta.pythonPath or python_path
   )
-  python_activate_path =
-    meta.activate_python_path or meta.activatePythonPath or python_activate_path
+  python_activate_path = meta.activate_python_path or
+                         meta.activatePythonPath or
+                         python_activate_path
   python_activate_path = python_activate_path and stringify(python_activate_path)
   java_path = stringify(
     meta.java_path or meta.javaPath or java_path
@@ -112,34 +144,39 @@ function Meta(meta)
     meta.pdflatex_path or meta.pdflatexPath or pdflatex_path
   )
   asymptote_path = stringify(
-     meta.asymptote_path or meta.asymptotePath or asymptote_path
+    meta.asymptote_path or meta.asymptotePath or asymptote_path
   )
+  
+  return nil
 end
 
--- Call plantuml.jar with some parameters (cf. PlantUML help):
+-- ============================================================================
+-- Diagram Generators
+-- ============================================================================
+
+--- Generate image from PlantUML code
+---
+--- @param puml string The PlantUML source code
+--- @param filetype string The output file type (svg, png, pdf)
+--- @return string|nil The generated image data, or nil on error
 local function plantuml(puml, filetype)
   return pandoc.pipe(
-    -- java_path,
     "plantuml",
-    -- {"-jar", pla,ntuml_path, "-t" .. filetype, "-pipe", "-charset", "UTF8"},
     {"-t" .. filetype, "-pipe", "-charset", "UTF8"},
     puml
   )
 end
 
--- Call dot (GraphViz) in order to generate the image
--- (thanks @muxueqz for this code):
+--- Generate image from GraphViz code
+---
+--- @param code string The GraphViz/DOT source code
+--- @param filetype string The output file type
+--- @return string|nil The generated image data, or nil on error
 local function graphviz(code, filetype)
   return pandoc.pipe(dot_path, {"-T" .. filetype}, code)
 end
 
---
--- TikZ
---
-
---- LaTeX template used to compile TikZ images. Takes additional
---- packages as the first, and the actual TikZ code as the second
---- argument.
+--- LaTeX template for TikZ compilation
 local tikz_template = [[
 \documentclass{standalone}
 \usepackage{tikz}
@@ -151,31 +188,42 @@ local tikz_template = [[
 \end{document}
 ]]
 
--- Returns a function which takes the filename of a PDF or SVG file
--- and a target filename, and writes the input as the given format.
--- Returns `nil` if conversion into the target format is not possible.
+--- Create Inkscape converter function for PDF to other formats
+---
+--- This function returns a converter function that uses Inkscape to convert
+--- PDF files to other formats (SVG, PNG). It handles both Inkscape 1.x and
+--- older versions with different command-line syntax.
+---
+--- @param filetype string Target format (svg or png)
+--- @return function|nil Converter function(pdf_file, outfile), or nil if unsupported
 local function convert_with_inkscape(filetype)
-  -- Build the basic Inkscape command for the conversion
-  local inkscape_output_args
-
-  -- Check inksape version.
-  -- TODO: this can be removed if supporting older Inkscape is not important.
+  -- Check Inkscape version to determine command syntax
   local inkscape_v_string = io.popen(inkscape_path .. " --version"):read()
+  if not inkscape_v_string then
+    return nil
+  end
+  
   local inkscape_v_major = inkscape_v_string:gmatch("([0-9]*)%.")()
   local isv1 = tonumber(inkscape_v_major) >= 1
 
-  local cmd_arg = isv1 and '"%s" "%s" -o "%s" ' or '"%s" --without-gui --file="%s" '
+  -- Build command argument template based on version
+  local cmd_arg = isv1 and '"%s" "%s" -o "%s" ' or
+                  '"%s" --without-gui --file="%s" '
 
+  -- Build output arguments based on format
+  local output_args
   if filetype == 'png' then
     local png_arg = isv1 and '--export-type=png' or '--export-png="%s"'
     output_args = png_arg .. ' --export-dpi=300'
   elseif filetype == 'svg' then
-    output_args = isv1 and '--export-type=svg --export-plain-svg' or '--export-plain-svg="%s"'
+    output_args = isv1 and '--export-type=svg --export-plain-svg' or
+                   '--export-plain-svg="%s"'
   else
-    return nil
+    return nil  -- Unsupported format
   end
 
-  return function (pdf_file, outfile)
+  -- Return converter function
+  return function(pdf_file, outfile)
     local inkscape_command = string.format(
       cmd_arg .. output_args,
       inkscape_path,
@@ -183,44 +231,59 @@ local function convert_with_inkscape(filetype)
       outfile
     )
     local command_output = io.popen(inkscape_command)
-    -- TODO: print output when debugging.
-    command_output:close()
+    if command_output then
+      command_output:close()
+    end
   end
 end
 
---- Compile LaTeX with Tikz code to an image
+--- Compile TikZ code to an image
+---
+--- This function compiles TikZ LaTeX code to an image by:
+--- 1. Creating a standalone LaTeX document
+--- 2. Compiling it with pdflatex
+--- 3. Converting the PDF to the target format using Inkscape
+---
+--- @param src string The TikZ source code
+--- @param filetype string The output file type
+--- @param additional_packages string|nil Additional LaTeX packages to include
+--- @return string|nil The generated image data, or nil on error
 local function tikz2image(src, filetype, additional_packages)
   local convert = convert_with_inkscape(filetype)
-  -- Bail if there is now known way from PDF to the target format.
   if not convert then
     error(string.format("Don't know how to convert pdf to %s.", filetype))
   end
-  return with_temporary_directory("tikz2image", function (tmpdir)
-    return with_working_directory(tmpdir, function ()
-      -- Define file names:
+  
+  return with_temporary_directory("tikz2image", function(tmpdir)
+    return with_working_directory(tmpdir, function()
+      -- Define file names
       local file_template = "%s/tikz-image.%s"
       local tikz_file = file_template:format(tmpdir, "tex")
       local pdf_file = file_template:format(tmpdir, "pdf")
       local outfile = file_template:format(tmpdir, filetype)
 
-      -- Build and write the LaTeX document:
+      -- Build and write the LaTeX document
       local f = io.open(tikz_file, 'w')
+      if not f then
+        error("Could not open TikZ file for writing")
+      end
       f:write(tikz_template:format(additional_packages or '', src))
       f:close()
 
-      -- Execute the LaTeX compiler:
+      -- Execute the LaTeX compiler
       pandoc.pipe(pdflatex_path, {'-output-directory', tmpdir, tikz_file}, '')
 
+      -- Convert PDF to target format
       convert(pdf_file, outfile)
 
-      -- Try to open and read the image:
+      -- Read the generated image
       local img_data
       local r = io.open(outfile, 'rb')
       if r then
         img_data = r:read("*all")
         r:close()
       else
-        -- TODO: print warning
+        error("Could not read generated image file")
       end
 
       return img_data
@@ -228,74 +291,87 @@ local function tikz2image(src, filetype, additional_packages)
   end)
 end
 
--- Run Python to generate an image:
+--- Generate image from Python code
+---
+--- This function executes Python code to generate an image. The Python code
+--- should use $FORMAT$ and $DESTINATION$ placeholders which will be replaced
+--- with the actual format and output file path.
+---
+--- @param code string The Python source code
+--- @param filetype string The output file type
+--- @return string|nil The generated image data, or nil on error
 local function py2image(code, filetype)
-
-  -- Define the temp files:
+  -- Define temporary files
   local outfile = string.format('%s.%s', os.tmpname(), filetype)
   local pyfile = os.tmpname()
 
-  -- Replace the desired destination's file type in the Python code:
-  local extendedCode = string.gsub(code, "%$FORMAT%$", filetype)
+  -- Replace placeholders in Python code
+  local extended_code = string.gsub(code, "%$FORMAT%$", filetype)
+  extended_code = string.gsub(extended_code, "%$DESTINATION%$", outfile)
 
-  -- Replace the desired destination's path in the Python code:
-  extendedCode = string.gsub(extendedCode, "%$DESTINATION%$", outfile)
-
-  -- Write the Python code:
+  -- Write the Python code to a file
   local f = io.open(pyfile, 'w')
-  f:write(extendedCode)
+  if not f then
+    error("Could not open Python file for writing")
+  end
+  f:write(extended_code)
   f:close()
 
-  -- Execute Python in the desired environment:
+  -- Execute Python in the desired environment
   local pycmd = python_path .. ' ' .. pyfile
-  local command = python_activate_path
-    and python_activate_path .. ' && ' .. pycmd
-    or pycmd
+  local command = python_activate_path and
+                  python_activate_path .. ' && ' .. pycmd or
+                  pycmd
   os.execute(command)
 
-  -- Try to open the written image:
+  -- Read the generated image
   local r = io.open(outfile, 'rb')
-  local imgData = nil
+  local img_data = nil
 
-  -- When the image exist, read it:
   if r then
-    imgData = r:read("*all")
+    img_data = r:read("*all")
     r:close()
   else
     io.stderr:write(string.format("File '%s' could not be opened", outfile))
-    error 'Could not create image from python code.'
+    error('Could not create image from python code.')
   end
 
-  -- Delete the tmp files:
+  -- Clean up temporary files
   os.remove(pyfile)
   os.remove(outfile)
 
-  return imgData
+  return img_data
 end
 
---
--- Asymptote
---
-
+--- Generate image from Asymptote code
+---
+--- @param code string The Asymptote source code
+--- @param filetype string The output file type (svg or png)
+--- @return string|nil The generated image data, or nil on error
 local function asymptote(code, filetype)
-  local convert
   if filetype ~= 'svg' and filetype ~= 'png' then
     error(string.format("Conversion to %s not implemented", filetype))
   end
+  
   return with_temporary_directory(
     "asymptote",
     function(tmpdir)
       return with_working_directory(
         tmpdir,
-        function ()
+        function()
           local asy_file = "pandoc_diagram.asy"
           local svg_file = "pandoc_diagram.svg"
           local f = io.open(asy_file, 'w')
+          if not f then
+            error("Could not open Asymptote file for writing")
+          end
           f:write(code)
           f:close()
 
+          -- Generate SVG
           pandoc.pipe(asymptote_path, {"-f", "svg", "-o", "pandoc_diagram", asy_file}, "")
 
+          -- Read result (SVG or converted PNG)
           local r
           if filetype == 'svg' then
             r = io.open(svg_file, 'rb')
@@ -313,15 +389,25 @@ local function asymptote(code, filetype)
             error("could not read asymptote result file")
           end
           return img_data
-      end)
-  end)
+        end
+      )
+    end
+  )
 end
 
--- Function to write binary data to a file
+-- ============================================================================
+-- File Management
+-- ============================================================================
+
+--- Write binary data to a file
+---
+--- @param file_path string Path to the file
+--- @param binary_data string The binary data to write
+--- @return boolean True on success, false on error
 local function write_binary_data_to_file(file_path, binary_data)
   local file, err = io.open(file_path, "wb")
   if not file then
-    error(string.format("Error opening file:", err))
+    error(string.format("Error opening file '%s': %s", file_path, err or "unknown error"))
     return false
   end
 
@@ -330,15 +416,24 @@ local function write_binary_data_to_file(file_path, binary_data)
   return true
 end
 
+--- Create directory if needed and write file (if it doesn't exist)
+---
+--- This function creates the figures directory if it doesn't exist and
+--- writes the image file only if it doesn't already exist (for caching).
+---
+--- @param directory string Directory path
+--- @param file_name string File name
+--- @param binary_data string Binary data to write
+--- @return boolean True on success, false on error
 local function create_directory_and_write_file(directory, file_name, binary_data)
   local full_path = directory .. "/" .. file_name
 
   -- Create directory if necessary
   if not os.execute("[ -d " .. directory .. " ]") then
-    os.execute("mkdir " .. directory)
+    os.execute("mkdir -p " .. directory)
   end
 
-  -- Check if file exists, create and write data if necessary
+  -- Write file only if it doesn't exist (cache optimization)
   if not os.execute("[ -f " .. full_path .. " ]") then
     if not write_binary_data_to_file(full_path, binary_data) then
       return false
@@ -348,112 +443,162 @@ local function create_directory_and_write_file(directory, file_name, binary_data
   return true
 end
 
--- Executes each document's code block to find matching code blocks:
-function CodeBlock(block)
-  -- Using a table with all known generators i.e. converters:
-  local converters = {
-    plantuml = plantuml,
-    graphviz = graphviz,
-    tikz = tikz2image,
-    py2image = py2image,
-    asymptote = asymptote,
-  }
+-- ============================================================================
+-- Code Block Processing
+-- ============================================================================
 
-  -- Check if a converter exists for this block. If not, return the block
-  -- unchanged.
-  local img_converter = converters[block.classes[1]]
-  if not img_converter then
-    return nil
-  end
+--- Map of supported diagram generators
+local converters = {
+  plantuml = plantuml,
+  graphviz = graphviz,
+  tikz = tikz2image,
+  py2image = py2image,
+  asymptote = asymptote,
+}
 
-  -- Call the correct converter which belongs to the used class:
-  local success, img = pcall(img_converter, block.text,
-      filetype, block.attributes["additionalPackages"] or nil)
+--- Get the converter function for a code block class
+---
+--- @param class_name string The class name from the code block
+--- @return function|nil The converter function, or nil if not found
+local function get_converter(class_name)
+  return converters[class_name]
+end
 
-  -- Bail if an error occured; img contains the error message when that
-  -- happens.
+--- Generate image and save it to file
+---
+--- @param block table The CodeBlock element
+--- @param converter function The converter function to use
+--- @return string|nil Binary image data, or nil on error
+local function generate_image(block, converter)
+  -- Call the converter to generate the image
+  local success, img = pcall(converter, block.text,
+                             filetype, block.attributes["additionalPackages"] or nil)
+
+  -- Handle errors
   if not (success and img) then
     io.stderr:write(tostring(img or "no image data has been returned."))
     io.stderr:write('\n')
-    error 'Image conversion failed. Aborting.'
+    error('Image conversion failed. Aborting.')
   end
 
-  -- If we got here, then the transformation went ok and `img` contains
-  -- the image data.
+  return img
+end
 
-  -- Create figure name by hashing the image content
-  local fname = pandoc.sha1(img) .. "." .. filetype
-
-  -- Rename the figure to its identifier, then we can
-  -- save the image file and use it in latex
+--- Generate filename for the image
+---
+--- @param block table The CodeBlock element
+--- @param img_data string Binary image data
+--- @return string The filename
+local function generate_filename(block, img_data)
+  -- Use identifier if present, otherwise hash
   if block.identifier then
     local id = block.identifier:gsub('.*:', '', 1)
-    fname = id .. '.' .. filetype
-  end
-
-  -- logging.output('fname', fname)
-  -- write the img data to a file
-  create_directory_and_write_file('figures', fname, img)
-
-  -- Store the data in the media bag:
-  pandoc.mediabag.insert(fname, mimetype, img)
-
-  local enable_caption = nil
-
-  -- If the user defines a caption, read it as Markdown.
-  local caption = block.attributes.caption
-    and pandoc.read(block.attributes.caption).blocks
-    or pandoc.Blocks{}
-  local alt = pandoc.utils.blocks_to_inlines(caption)
-
-  if PANDOC_VERSION < 3 then
-    -- A non-empty caption means that this image is a figure. We have to
-    -- set the image title to "fig:" for pandoc to treat it as such.
-    local title = #caption > 0 and "fig:" or ""
-
-    -- Transfer identifier and other relevant attributes from the code
-    -- block to the image. The `name` is kept as an attribute.
-    -- This allows a figure block starting with:
-    --
-    --     ```{#fig:example .plantuml caption="Image created by **PlantUML**."}
-    --
-    -- to be referenced as @fig:example outside of the figure when used
-    -- with `pandoc-crossref`.
-    local img_attr = {
-      id = block.identifier,
-      name = block.attributes.name,
-      width = block.attributes.width,
-      height = block.attributes.height
-    }
-
-    -- Create a new image for the document's structure. Attach the user's
-    -- caption. Also use a hack (fig:) to enforce pandoc to create a
-    -- figure i.e. attach a caption to the image.
-    local img_obj = pandoc.Image(alt, fname, title, img_attr)
-
-    -- Finally, put the image inside an empty paragraph. By returning the
-    -- resulting paragraph object, the source code block gets replaced by
-    -- the image:
-    return pandoc.Para{ img_obj }
+    return id .. '.' .. filetype
   else
-    local fig_attr = {
-      id = block.identifier,
-      name = block.attributes.name,
-    }
-    local img_attr = {
-      width = block.attributes.width,
-      height = block.attributes.height,
-    }
-    local img_obj = pandoc.Image(alt, fname, "", img_attr)
-
-    -- Create a figure that contains just this image.
-    return pandoc.Figure(pandoc.Plain{img_obj}, caption, fig_attr)
+    return pandoc.sha1(img_data) .. "." .. filetype
   end
 end
 
--- Normally, pandoc will run the function in the built-in order Inlines ->
--- Blocks -> Meta -> Pandoc. We instead want Meta -> Blocks. Thus, we must
--- define our custom order:
+--- Save image and store in media bag
+---
+--- @param fname string The filename
+--- @param img_data string Binary image data
+local function save_image(fname, img_data)
+  -- Write image file to figures directory
+  create_directory_and_write_file('figures', fname, img_data)
+
+  -- Store in media bag for embedded resources
+  pandoc.mediabag.insert(fname, mimetype, img_data)
+end
+
+--- Create image/figure element for Pandoc 2.x
+---
+--- @param block table The CodeBlock element
+--- @param fname string The filename
+--- @param caption table Blocks representing the caption
+--- @param alt table Inlines representing the alt text
+--- @return table Para block containing the image
+local function create_image_pandoc2(block, fname, caption, alt)
+  local title = #caption > 0 and "fig:" or ""
+  local img_attr = {
+    id = block.identifier,
+    name = block.attributes.name,
+    width = block.attributes.width,
+    height = block.attributes.height
+  }
+  local img_obj = pandoc.Image(alt, fname, title, img_attr)
+  return pandoc.Para{img_obj}
+end
+
+--- Create figure element for Pandoc 3.x
+---
+--- @param block table The CodeBlock element
+--- @param fname string The filename
+--- @param caption table Blocks representing the caption
+--- @param alt table Inlines representing the alt text
+--- @return table Figure element
+local function create_figure_pandoc3(block, fname, caption, alt)
+  local fig_attr = {
+    id = block.identifier,
+    name = block.attributes.name,
+  }
+  local img_attr = {
+    width = block.attributes.width,
+    height = block.attributes.height,
+  }
+  local img_obj = pandoc.Image(alt, fname, "", img_attr)
+  return pandoc.Figure(pandoc.Plain{img_obj}, caption, fig_attr)
+end
+
+--- Process code blocks and convert them to images
+---
+--- This function processes code blocks with diagram generator classes and
+--- converts them to images or figures. Supported classes:
+--- - plantuml: PlantUML diagrams
+--- - graphviz: GraphViz/DOT graphs
+--- - tikz: TikZ graphics
+--- - py2image: Python image generation
+--- - asymptote: Asymptote graphics
+---
+--- @param block table The CodeBlock element
+--- @return table|nil The processed block (Image or Figure), or nil if unchanged
+function CodeBlock(block)
+  -- Get converter for this code block class
+  local converter = get_converter(block.classes[1])
+  if not converter then
+    return nil  -- Not a diagram code block, leave unchanged
+  end
+
+  -- Generate the image
+  local img_data = generate_image(block, converter)
+  if not img_data then
+    return nil
+  end
+
+  -- Generate filename and save image
+  local fname = generate_filename(block, img_data)
+  save_image(fname, img_data)
+
+  -- Process caption
+  local caption = block.attributes.caption and
+                  pandoc.read(block.attributes.caption).blocks or
+                  pandoc.Blocks{}
+  local alt = pandoc.utils.blocks_to_inlines(caption)
+
+  -- Handle different Pandoc versions
+  if PANDOC_VERSION < 3 then
+    return create_image_pandoc2(block, fname, caption, alt)
+  else
+    return create_figure_pandoc3(block, fname, caption, alt)
+  end
+end
+
+-- ============================================================================
+-- Filter Registration
+-- ============================================================================
+
+-- Meta must be processed first to get tool paths
+-- Then code blocks are processed
 return {
   {Meta = Meta},
   {CodeBlock = CodeBlock},
