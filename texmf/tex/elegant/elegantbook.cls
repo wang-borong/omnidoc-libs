@@ -87,7 +87,7 @@
 
 
 % ----- Math option -----
-\newcommand\mailto[1]{\href{mailto:#1}{\nolinkurl{#1}}}
+\RequirePackage{commands}
 
 % ----- Title Style -----
 \DeclareStringOption[hang]{titlestyle}[hang]
@@ -225,29 +225,8 @@
     \setlength\parindent{2\ccwd}}
 }{\relax}
 
-\ifcsname heiti\endcsname
-  \newcommand{\cbfseries}{\heiti}
-\else
-  \newcommand{\cbfseries}{\bfseries}
-\fi
-
-
-\ifcsname kaishu\endcsname
-  \newcommand{\citshape}{\kaishu}
-\else
-  \newcommand{\citshape}{\itshape}
-\fi
-\ifcsname kaishu\endcsname
-  \newcommand{\cnormal}{\kaishu}
-\else
-  \newcommand{\cnormal}{\normalfont}
-\fi
-
-\ifcsname fangsong\endcsname
-  \newcommand{\cfs}{\fangsong}
-\else
-  \newcommand{\cfs}{\normalfont}
-\fi
+% CJK font commands are provided by cjk-fonts.sty
+\RequirePackage{cjk-fonts}
 
 \RequirePackage{anyfontsize}
 \ifdefstring{\ELEGANT@math}{newtx}{
@@ -285,7 +264,8 @@
 % ----- Handle Colors -----
 %% 章节以及页脚图形
 
-\RequirePackage[table]{xcolor}
+% xcolor is loaded by colors.sty, but we need the [table] option
+\PassOptionsToPackage{table}{xcolor}
 \ifdefstring{\ELEGANT@color}{green}{
   \definecolor{structurecolor}{RGB}{0,120,2}%
   \definecolor{main}{RGB}{0,120,2}%
@@ -343,8 +323,8 @@
 \definecolor{second5}{RGB}{0,0,0}%
 \definecolor{third5}{RGB}{0,0,0}%
 
-% corlor definition
-\definecolor{winered}{rgb}{0.5,0,0}
+% Color definition
+\RequirePackage{colors}
 \definecolor{bule}{RGB}{18,29,57}
 \colorlet{coverlinecolor}{second}
 
@@ -356,7 +336,7 @@
 % reference: 
 % https://tex.stackexchange.com/questions/58506/how-to-make-a-new-command-similar-to-author
 % https://pastebin.com/C8W4axzV
-\newcommand\email[1]{\href{mailto:#1}{\nolinkurl{#1}}}
+% \email command is provided by commands.sty
 
 \global\let\@title\@empty
 \global\let\@author\@empty
@@ -413,7 +393,7 @@
   citestyle=\ELEGANT@citestyle,
   bibstyle=\ELEGANT@bibstyle]{biblatex}
 
-\RequirePackage{listings}
+\RequirePackage{listings-config}
 
 \ifdefstring{\ELEGANT@lang}{cn}{
   \renewcommand{\baselinestretch}{1.3}
@@ -835,7 +815,7 @@
 
 
 \RequirePackage{helper}
-\graphicspath{{./figure/}{./figures/}{\globimagepath/}{./image/}{./images/}{./graphics/}{./graphic/}{./pictures/}{./picture/}}
+\RequirePackage{graphics}
 
 \RequirePackage{tikz} %% load tikz without tikz
 \usetikzlibrary{backgrounds,calc,shadows,positioning,fit}

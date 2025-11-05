@@ -143,21 +143,8 @@
     \setlength\parindent{2\ccwd}}
 }{\relax}
 
-\ifcsname kaishu\endcsname
-  \newcommand{\citshape}{\kaishu}
-\else
-  \newcommand{\citshape}{\itshape}
-\fi
-\ifcsname kaishu\endcsname
-  \newcommand{\cnormal}{\kaishu}
-\else
-  \newcommand{\cnormal}{\normalfont}
-\fi
-\ifcsname fangsong\endcsname
-  \newcommand{\cfs}{\fangsong}
-\else
-  \newcommand{\cfs}{\normalfont}
-\fi
+% CJK font commands are provided by cjk-fonts.sty
+\RequirePackage{cjk-fonts}
 
 
 \ifdefstring{\ELEGANT@math}{newtx}{
@@ -242,8 +229,8 @@
 \RequirePackage{booktabs}
 \let\openbox\relax
 
-\RequirePackage{xcolor}
-\definecolor{winered}{rgb}{0.5,0,0}
+% xcolor is loaded by colors.sty
+\RequirePackage{colors}
 \definecolor{epubblue}{RGB}{1,126,218}
 
 \RequirePackage{xurl}
@@ -265,7 +252,6 @@
 \setlength{\parskip}{3mm}
 \setlength{\parindent}{2em}
 % 定义护眼模式 geye=true
-\RequirePackage{xcolor}
 \RequirePackage{silence}
 
 % good for eye color 
@@ -284,20 +270,9 @@
 
 
 \RequirePackage{helper}
-% graphics path
-\graphicspath{
-  {./figure/}
-  {./figures/}
-  {\globimagepath/}
-  {./image/}
-  {./images/}
-  {./graphics/}
-  {./graphic/}
-  {./pictures/}
-  {./picture/}
-}
+\RequirePackage{graphics}
 
-\let\openbox\relax
+% \openbox is already let to \relax earlier
 \newtheoremstyle{plain}{\topsep}{\topsep}{\citshape}{}{%
   \color{ecolor}\bfseries}{}{%
   0.5em}{%

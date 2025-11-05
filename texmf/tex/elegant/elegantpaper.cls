@@ -75,7 +75,7 @@
 \RequirePackage{multicol}
 \RequirePackage{multirow}
 % \RequirePackage{linegoal}
-\RequirePackage{xcolor}
+% xcolor is loaded by colors.sty
 \RequirePackage{graphicx}
 \RequirePackage{fancyvrb}
 \RequirePackage{abstract}
@@ -83,14 +83,7 @@
 
 \linespread{1.35}
 \RequirePackage{helper}
-\graphicspath{
-  {\globimagepath/}
-  {image/}{images/}
-  {figure/}{figures/}
-  {graphic/}{graphics/}
-  {picture/}{pictures/}
-  {fig/}{img/}
-}
+\RequirePackage{graphics}
 
 % caption settings 
 \RequirePackage[labelfont={bf}]{caption}
@@ -102,17 +95,16 @@
 \setlist{nolistsep}
 
 
-% define the hyperref color 
-\RequirePackage{xcolor}
-\definecolor{winered}{rgb}{0.5,0,0}
+% Common colors are provided by colors.sty
+\RequirePackage{colors}
 
 \definecolor{lightgrey}{rgb}{0.95,0.95,0.95}
 \definecolor{commentcolor}{RGB}{0,100,0}
 \definecolor{frenchplum}{RGB}{190,20,83}
 
 
-% add the email cmd 
-\newcommand\email[1]{\href{mailto:#1}{\nolinkurl{#1}}}
+% \email command is provided by commands.sty
+\RequirePackage{commands}
 
 % font settings
 
@@ -188,22 +180,8 @@
 }{\relax}
 
 
-\ifcsname kaishu\endcsname
-  \newcommand{\citshape}{\kaishu}
-\else
-  \newcommand{\citshape}{\itshape}
-\fi
-\ifcsname kaishu\endcsname
-  \newcommand{\cnormal}{\kaishu}
-\else
-  \newcommand{\cnormal}{\normalfont}
-\fi
-
-\ifcsname fangsong\endcsname
-  \newcommand{\cfs}{\fangsong}
-\else
-  \newcommand{\cfs}{\normalfont}
-\fi
+% CJK font commands are provided by cjk-fonts.sty
+\RequirePackage{cjk-fonts}
 
 \ifdefstring{\ELEGANT@math}{newtx}{
   \RequirePackage{newtxmath}
