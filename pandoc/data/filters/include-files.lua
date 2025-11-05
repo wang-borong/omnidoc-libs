@@ -49,12 +49,16 @@ local update_cont = false
 --- Tracks the last heading level encountered in the document
 local last_heading_level = 0
 
+--- Stores title content from headers shifted to level 0 (as Inlines to preserve formatting)
+local document_title_inlines = nil
+
 -- ============================================================================
 -- Meta Processing
 -- ============================================================================
 
 --- Extract configuration from document metadata
 --- @param meta table The document metadata
+--- @return table|nil The metadata (modified if title was set from shifted header)
 function get_vars(meta)
   if meta['include-auto'] then
     include_auto = true
@@ -62,6 +66,23 @@ function get_vars(meta)
   if meta['update-contents'] then
     update_cont = true
   end
+  -- Note: document_title_inlines will be set during block processing
+  -- We'll handle it in Pandoc filter instead
+  return nil
+end
+
+--- Process the document and update Meta title if a header was shifted to level 0
+--- @param doc table The Pandoc document
+--- @return table The processed document
+function Pandoc(doc)
+  -- If a title was set from a shifted header, update the document meta
+  if document_title_inlines then
+    -- Convert Inlines to MetaInlines to preserve formatting
+    doc.meta.title = pandoc.MetaInlines(document_title_inlines)
+    -- Reset for next document (if processing multiple documents)
+    document_title_inlines = nil
+  end
+  return doc
 end
 
 -- ============================================================================
@@ -97,8 +118,18 @@ local function update_contents(blocks, shift_by, include_path)
     -- Shift headings in block list by given number
     Header = function(header)
       if shift_by and shift_by ~= 0 then
-        -- Ensure heading level stays within 1-6 range (valid heading levels in Markdown)
-        local new_level = math.max(1, math.min(header.level + shift_by, 6))
+        local new_level = header.level + shift_by
+        -- If level becomes 0, set as document title and remove the header
+        if new_level == 0 then
+          -- Store header content as Inlines to preserve formatting
+          document_title_inlines = header.content
+          -- Return empty list to delete the header element
+          return {}
+        -- Remove heading if level becomes < 0
+        elseif new_level < 0 then
+          -- Return empty list to delete the header element
+          return {}
+        end
         header.level = new_level
       end
       return header
@@ -286,7 +317,9 @@ end
 -- Return filter functions in the correct order
 -- Meta must be processed first to get configuration
 -- Then headers and code blocks are processed
+-- Pandoc filter is processed last to update Meta title if needed
 return {
   { Meta = get_vars },
-  { Header = update_last_level, CodeBlock = transclude }
+  { Header = update_last_level, CodeBlock = transclude },
+  { Pandoc = Pandoc }
 }
