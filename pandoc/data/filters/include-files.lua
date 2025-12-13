@@ -60,14 +60,8 @@ local document_title_inlines = nil
 --- @param meta table The document metadata
 --- @return table|nil The metadata (modified if title was set from shifted header)
 function get_vars(meta)
-  if meta['include-auto'] then
-    include_auto = true
-  end
-  if meta['update-contents'] then
-    update_cont = true
-  end
-  -- Note: document_title_inlines will be set during block processing
-  -- We'll handle it in Pandoc filter instead
+  include_auto = meta['include-auto'] and true or false
+  update_cont = meta['update-contents'] and true or false
   return nil
 end
 
@@ -119,18 +113,20 @@ local function update_contents(blocks, shift_by, include_path)
     Header = function(header)
       if shift_by and shift_by ~= 0 then
         local new_level = header.level + shift_by
-        -- If level becomes 0, set as document title and remove the header
-        if new_level == 0 then
-          -- Store header content as Inlines to preserve formatting
-          document_title_inlines = header.content
-          -- Return empty list to delete the header element
-          return {}
-        -- Remove heading if level becomes < 0
-        elseif new_level < 0 then
-          -- Return empty list to delete the header element
-          return {}
+        -- If level becomes 0 or negative, remove the header
+        if new_level <= 0 then
+          if new_level == 0 then
+            -- Store header content as document title
+            document_title_inlines = header.content
+          end
+          return nil
         end
-        header.level = new_level
+        -- Clamp level to maximum (6)
+        if new_level > 6 then
+          new_level = 6
+        end
+        -- Create a new header with updated level
+        return pandoc.Header(new_level, header.content, header.attr)
       end
       return header
     end,
@@ -159,6 +155,21 @@ end
 -- ============================================================================
 -- File Transclusion
 -- ============================================================================
+
+-- Forward declaration of transclude function (defined later)
+local transclude
+
+--- Check if a CodeBlock has the 'include' class
+--- @param cb table The code block element
+--- @return boolean True if the block has 'include' class
+local function has_include_class(cb)
+  for i = 1, #cb.classes do
+    if cb.classes[i] == 'include' then
+      return true
+    end
+  end
+  return false
+end
 
 --- Read and parse a file for inclusion
 ---
@@ -216,18 +227,34 @@ local function process_included_file(file_path, format, shift_heading_level_by)
 
   -- Recursive transclusion: process the included file in its own directory
   -- This allows relative paths in the included file to work correctly
+  -- Process blocks in the included file, handling nested includes
+  local function process_blocks_recursive(blocks_list)
+    local result = List:new()
+    for _, block in ipairs(blocks_list) do
+      if block.t == "Header" then
+        update_last_level(block)
+        result:insert(block)
+      elseif block.t == "CodeBlock" and has_include_class(block) then
+        -- Recursively process include CodeBlocks
+        local nested_result = transclude(block)
+        if nested_result then
+          for _, b in ipairs(nested_result) do
+            result:insert(b)
+          end
+        end
+      else
+        result:insert(block)
+      end
+    end
+    return result
+  end
+  
   contents = system.with_working_directory(
     path.directory(file_path),
     function()
-      return pandoc.walk_block(
-        pandoc.Div(contents),
-        {
-          Header = update_last_level,
-          CodeBlock = transclude  -- Recursive call
-        }
-      )
+      return process_blocks_recursive(contents)
     end
-  ).content
+  )
 
   -- Reset to level before recursion
   last_heading_level = buffer_last_heading_level
@@ -247,12 +274,19 @@ end
 local function determine_heading_shift(cb)
   local shift_input = cb.attributes['shift-heading-level-by']
   if shift_input then
-    return tonumber(shift_input) or 0
-  elseif include_auto then
-    -- Auto shift headings based on current heading level
-    return last_heading_level
+    local shift_num = tonumber(shift_input)
+    if shift_num then
+      return shift_num
+    end
+    -- Invalid value, log warning and return 0
+    io.stderr:write(string.format(
+      "Warning: Invalid value for 'shift-heading-level-by' attribute: '%s'. Using 0.\n",
+      tostring(shift_input)
+    ))
+    return 0
   end
-  return 0
+  -- Auto shift if enabled, otherwise no shift
+  return include_auto and last_heading_level or 0
 end
 
 --- Transclude external files into the document
@@ -269,11 +303,16 @@ end
 ---
 --- @param cb table The code block element
 --- @return table|nil List of blocks if this is an include block, nil otherwise
-local function transclude(cb)
+transclude = function(cb)
   -- Ignore code blocks which are not of class "include"
-  if not cb.classes:includes('include') then
+  if not has_include_class(cb) then
     return nil
   end
+
+  -- IMPORTANT: Once we've identified this as an include CodeBlock,
+  -- we MUST replace it completely to prevent its attributes (like
+  -- shift-heading-level-by) from being passed to the output.
+  -- Even if processing fails, we return an empty blocks list to delete it.
 
   -- Get the format to use for reading the included file
   local format = cb.attributes['format'] or 'markdown'
@@ -285,28 +324,22 @@ local function transclude(cb)
 
   -- Process each line in the code block as a file path
   for line in cb.text:gmatch('[^\n]+') do
-    -- Skip comment lines (lines starting with '//')
-    if line:sub(1, 2) == '//' then
-      goto continue
-    end
-
-    -- Trim whitespace from the line
+    -- Trim whitespace and skip comments/empty lines
     line = line:match('^%s*(.-)%s*$') or line
-
-    -- Skip empty lines
-    if line == '' then
-      goto continue
+    if line ~= '' and line:sub(1, 2) ~= '//' then
+      local file_blocks = process_included_file(line, format, shift_heading_level_by)
+      if file_blocks then
+        blocks:extend(file_blocks)
+      end
     end
-
-    -- Process the included file
-    local file_blocks = process_included_file(line, format, shift_heading_level_by)
-    if file_blocks then
-      blocks:extend(file_blocks)
-    end
-
-    ::continue::
   end
 
+  -- CRITICAL: Always return blocks (even if empty) to replace the include CodeBlock.
+  -- This ensures the original CodeBlock with ALL its attributes (including
+  -- shift-heading-level-by, format, etc.) is completely removed and doesn't
+  -- get passed through to the output (e.g., LaTeX lstlisting environment).
+  -- Returning an empty list will delete the CodeBlock, preventing its attributes
+  -- from appearing in the final output.
   return blocks
 end
 
