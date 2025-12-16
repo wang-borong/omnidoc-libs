@@ -270,7 +270,7 @@
 
 
 \RequirePackage{helper}
-\RequirePackage{graphics}
+\RequirePackage{graphs}
 
 % \openbox is already let to \relax earlier
 \newtheoremstyle{plain}{\topsep}{\topsep}{\citshape}{}{%

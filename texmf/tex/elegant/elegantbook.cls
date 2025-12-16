@@ -815,7 +815,7 @@
 
 
 \RequirePackage{helper}
-\RequirePackage{graphics}
+\RequirePackage{graphs}
 
 \RequirePackage{tikz} %% load tikz without tikz
 \usetikzlibrary{backgrounds,calc,shadows,positioning,fit}

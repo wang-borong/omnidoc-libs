@@ -83,7 +83,7 @@
 
 \linespread{1.35}
 \RequirePackage{helper}
-\RequirePackage{graphics}
+\RequirePackage{graphs}
 
 % caption settings 
 \RequirePackage[labelfont={bf}]{caption}

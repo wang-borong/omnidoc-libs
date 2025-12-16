@@ -92,6 +92,6 @@
 \lstset{basicstyle=\zihao{-5}\ttfamily}
 
 \RequirePackage{helper}
-\RequirePackage{graphics}
+\RequirePackage{graphs}
 
 \endinput
