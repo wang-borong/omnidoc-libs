@@ -59,20 +59,23 @@ $endif$
         else if is-zh { "目 录" }
         else { "Table of Contents" }
 
-    align(center)[#heading(numbering: none, outlined: false)[#t-title]]
+    let content = {
+      align(center)[#heading(numbering: none, outlined: false)[#t-title]]
 
-    show outline.entry.where(level: 1): it => {
-      v(1.5em, weak: true)
-      set text(font: font, weight: weight)
-      it
+      show outline.entry.where(level: 1): it => {
+        v(1.5em, weak: true)
+        set text(font: font, weight: weight)
+        it
+      }
+
+      set par(leading: toc-leading)
+      outline(title: none, depth: toc-depth)
     }
 
-    set par(leading: toc-leading)
-    outline(title: none, depth: toc-depth)
-
     if toc-own-page {
-      pagebreak()
+      page(header: none, footer: none, content)
     } else {
+      content
       h(2em)
     }
   }
@@ -91,7 +94,7 @@ $endif$
   is-zh: false
 ) = {
   if cover {
-     page(align(center + horizon)[
+     page(header: none, footer: none, align(center + horizon)[
         #if title != none {
             text(weight: weight, size: 26pt, font: font)[#title]
         }
@@ -152,6 +155,7 @@ $endif$
   toc-title: none,
   toc-depth: none,
   toc-leading: 1em,
+  header-text: "auto",
   heading-spacing-l1: 1.8em,
   heading-spacing-l2: 1.4em,
   heading-spacing-l3: 1.2em,
@@ -197,6 +201,44 @@ $endif$
     paper: paper,
     margin: margin,
     numbering: pagenumbering,
+    header: context {
+        if here().page() == 1 {
+            none
+        } else {
+             show emph: it => {
+                  set text(font: ("Times New Roman", "KaiTi", "AR PL New Kai",), style: "normal")
+                  show regex("[\x00-\x7F]+"): set text(font: "Times New Roman", style: "italic")
+                  it.body
+             }
+
+             if header-text == "auto" {
+                let here_loc = here()
+                let all_headings = query(heading.where(level: 1))
+                let page_headings = all_headings.filter(h => h.location().page() == here_loc.page())
+
+                let target = if page_headings.len() > 0 {
+                     page_headings.first()
+                } else {
+                     let prev = all_headings.filter(h => h.location().page() < here_loc.page())
+                     if prev.len() > 0 { prev.last() } else { none }
+                }
+
+                if target != none {
+                   let el = target
+                   let body = if el.numbering != none {
+                        numbering(el.numbering, ..counter(heading).at(el.location())) + h(0.75em) + el.body
+                   } else {
+                        el.body
+                   }
+                   align(left, emph(body))
+                }
+             } else {
+                if header-text != none and header-text != [] and header-text != "" {
+                    align(left, emph(header-text))
+                }
+             }
+        }
+    },
     // columns: cols -- Removed to allow per-section column control
   )
 
@@ -350,6 +392,10 @@ $endif$
     is-zh: is-zh
   )
 
+  if cover {
+    counter(page).update(1)
+  }
+
   if cover and abstract != none {
     let abstract_title_text = if abstract-title != none { abstract-title } else if is-zh { "摘 要" } else { "Abstract" }
     align(center)[#heading(level: 1, numbering: none, outlined: false)[#abstract_title_text]]
@@ -415,6 +461,10 @@ $endif$
     weight: heading-weight
   )
 
+  if toc {
+    counter(page).update(1)
+  }
+
   if is-zh and font == "auto" {
     show strong: it => {
        set text(font: ("Times New Roman", "SimHei"), weight: "regular")
@@ -477,6 +527,9 @@ $if(region)$
 $endif$
 $if(abstract-title)$
   abstract-title: [$abstract-title$],
+$endif$
+$if(header-text)$
+  header-text: [$header-text$],
 $endif$
 $if(abstract)$
   abstract: [$abstract$],
