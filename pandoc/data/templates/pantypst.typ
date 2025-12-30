@@ -1,3 +1,4 @@
+#import "@preview/i-figured:0.2.4" as i-figured
 #let horizontalrule = line(start: (25%,0%), end: (75%,0%))
 
 #show terms: it => {
@@ -91,16 +92,18 @@ $endif$
   abstract-title: none,
   font: (), // Main or Heading font
   weight: "bold",
+  title-size: 36pt,
+  subtitle-size: 26pt,
   is-zh: false
 ) = {
   if cover {
      page(header: none, footer: none, align(center + horizon)[
         #if title != none {
-            text(weight: weight, size: 26pt, font: font)[#title]
+            text(weight: weight, size: title-size, font: font)[#title]
         }
         #if subtitle != none {
             parbreak()
-            text(weight: weight, size: 18pt)[#subtitle]
+            text(weight: weight, size: subtitle-size)[#subtitle]
         }
         #if authors != none and authors != [] {
           v(2em)
@@ -156,9 +159,12 @@ $endif$
   toc-depth: none,
   toc-leading: 1em,
   header-text: "auto",
-  heading-spacing-l1: 1.8em,
-  heading-spacing-l2: 1.4em,
-  heading-spacing-l3: 1.2em,
+  heading-spacing-below: 1.5em,
+  heading-spacing-l1: 3em,
+  heading-spacing-l2: 2em,
+  heading-spacing-l3: 1.5em,
+  heading-spacing-l4: 1.25em,
+  heading-spacing-l5: 1.25em,
   list-indent: 1em,
   figure-caption-position: "bottom",
   table-caption-position: "top",
@@ -184,6 +190,12 @@ $endif$
   }
 
   let heading-weight = if is-zh { "regular" } else { "bold" }
+
+  let title-weight = heading-weight // Unified title weight
+  let title-size = 26pt // Unified (Cover)
+  let subtitle-size = 22pt // Unified (Cover)
+  let body-title-size = 22pt // Unified (Body)
+  let body-subtitle-size = 18pt // Unified (Body)
 
   // Localized terms
   let abstract-default-title = if is-zh { "摘 要" } else { "Abstract" }
@@ -327,25 +339,26 @@ $endif$
   show regex("[\u{2612}]"): "✅"
   show regex("[\u{2610}]"): "⬜"
 
+  // i-figured setup (Must be before specific show figure styling)
+  show heading.where(level: 1): i-figured.reset-counters
+  show figure: i-figured.show-figure.with(numbering: "1-1")
+
   // Caption styling
   let table-pos = if table-caption-position == "bottom" { bottom } else { top }
   let fig-pos = if figure-caption-position == "top" { top } else { bottom }
 
-  show figure.where(kind: table): set figure.caption(position: table-pos)
-  show figure.where(kind: image): set figure.caption(position: fig-pos)
-  show figure.where(kind: raw): set figure.caption(position: top)
+  show figure.where(kind: "i-figured-table"): set figure.caption(position: table-pos)
+  show figure.where(kind: "i-figured-image"): set figure.caption(position: fig-pos)
+  show figure.where(kind: "i-figured-raw"): set figure.caption(position: top)
   show figure: set block(above: block-spacing, below: block-spacing)
   show figure.caption: set text(font: main-font, size: 9pt)
   // Fix indentation for captions (reset to 0, force all: false)
   show figure.caption: set par(first-line-indent: (amount: 0pt, all: false))
   // Center all captions
-
-  // Math Numbering
-  set math.equation(numbering: "(1)")
   show figure.caption: set align(center)
 
   // Enable code supplement localization
-  show figure.where(kind: raw): set figure(supplement: code-supplement)
+  show figure.where(kind: "i-figured-raw"): set figure(supplement: code-supplement)
 
   // TOC settings
   show outline: set text(font: main-font)
@@ -357,12 +370,12 @@ $endif$
   // Heading Styles
   show heading: set text(font: heading-font, weight: heading-weight)
   show heading.where(level: 1): set align(center)
-  show heading: set block(below: 1.25em)
+  show heading: set block(below: heading-spacing-below)
   show heading.where(level: 1): set block(above: heading-spacing-l1)
   show heading.where(level: 2): set block(above: heading-spacing-l2)
   show heading.where(level: 3): set block(above: heading-spacing-l3)
-  show heading.where(level: 4): set block(above: 1em)
-  show heading.where(level: 5): set block(above: 1em)
+  show heading.where(level: 4): set block(above: heading-spacing-l4)
+  show heading.where(level: 5): set block(above: heading-spacing-l5)
   show heading: it => it // explicit passthrough not needed with set block, but to ensure no other wrapper breaks
   set heading(numbering: (..nums) => numbering(sectionnumbering, ..nums) + h(0.75em))
 
@@ -388,7 +401,9 @@ $endif$
     authors: authors,
     date: date,
     font: main-font,
-    weight: heading-weight,
+    weight: title-weight,
+    title-size: title-size,
+    subtitle-size: subtitle-size,
     is-zh: is-zh
   )
 
@@ -409,14 +424,14 @@ $endif$
       block(below: 4em, width: 100%)[
         #if title != none {
           align(center, block[
-              #text(weight: heading-weight, size: 1.5em, font: main-font)[#title #if thanks != none {
+              #text(weight: title-weight, size: body-title-size, font: main-font)[#title #if thanks != none {
                   footnote(thanks, numbering: "*")
                   counter(footnote).update(n => n - 1)
                 }]
               #(
                 if subtitle != none {
                   parbreak()
-                  text(weight: heading-weight, size: 1.25em)[#subtitle]
+                  text(weight: title-weight, size: body-subtitle-size)[#subtitle]
                 }
                )])
         }
@@ -584,6 +599,9 @@ $endif$
   toc: $if(toc)$true$else$false$endif$,
   toc-title: $if(toc-title)$[$toc-title$]$else$none$endif$,
   toc-depth: $if(toc-depth)$$toc-depth$$else$none$endif$,
+$if(heading-spacing-below)$
+  heading-spacing-below: $heading-spacing-below$,
+$endif$
 $if(heading-spacing-l1)$
   heading-spacing-l1: $heading-spacing-l1$,
 $endif$
@@ -592,6 +610,12 @@ $if(heading-spacing-l2)$
 $endif$
 $if(heading-spacing-l3)$
   heading-spacing-l3: $heading-spacing-l3$,
+$endif$
+$if(heading-spacing-l4)$
+  heading-spacing-l4: $heading-spacing-l4$,
+$endif$
+$if(heading-spacing-l5)$
+  heading-spacing-l5: $heading-spacing-l5$,
 $endif$
 $if(list-indent)$
   list-indent: $list-indent$,
