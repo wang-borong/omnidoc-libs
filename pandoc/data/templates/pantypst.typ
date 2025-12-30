@@ -514,7 +514,7 @@ $endfor$
     ),
 $endif$
 $if(keywords)$
-  keywords: ($for(keywords)$$keyword$$sep$,$endfor$),
+  keywords: ($for(keywords)$"$it$"$sep$,$endfor$),
 $endif$
 $if(date)$
   date: [$date$],
