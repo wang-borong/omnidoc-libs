@@ -1,0 +1,584 @@
+#let horizontalrule = line(start: (25%,0%), end: (75%,0%))
+
+#show terms: it => {
+  it.children
+    .map(child => [
+      #strong[#child.term]
+      #block(inset: (left: 1.5em, top: -0.4em))[#child.description]
+      ])
+    .join()
+}
+
+#set table(
+  inset: 6pt,
+  stroke: none
+)
+
+$if(highlighting-definitions)$
+// syntax highlighting functions from skylighting:
+$highlighting-definitions$
+
+$endif$
+
+// Embedded conf function with ctexart customizations
+#let content-to-string(content) = {
+  if content.has("text") {
+    content.text
+  } else if content.has("children") {
+    content.children.map(content-to-string).join("")
+  } else if content.has("body") {
+    content-to-string(content.body)
+  } else if content == [ ] {
+    " "
+  }
+}
+
+// GitHub-style Admonitions
+#let admonition-dict = (
+  "NOTE": (color: blue, title: "Note"),
+  "TIP": (color: green, title: "Tip"),
+  "IMPORTANT": (color: purple, title: "Important"),
+  "WARNING": (color: orange, title: "Warning"),
+  "CAUTION": (color: red, title: "Caution"),
+)
+
+// --- Helper Functions ---
+
+#let make-toc(
+  toc: false,
+  toc-title: none,
+  toc-depth: none,
+  toc-own-page: true,
+  toc-leading: 1em,
+  is-zh: false,
+  font: (),
+  weight: "bold"
+) = {
+  if toc {
+    let t-title = if toc-title != none { toc-title }
+        else if is-zh { "目 录" }
+        else { "Table of Contents" }
+
+    align(center)[#heading(numbering: none, outlined: false)[#t-title]]
+
+    show outline.entry.where(level: 1): it => {
+      v(1.5em, weak: true)
+      set text(font: font, weight: weight)
+      it
+    }
+
+    set par(leading: toc-leading)
+    outline(title: none, depth: toc-depth)
+
+    if toc-own-page {
+      pagebreak()
+    } else {
+      h(2em)
+    }
+  }
+}
+
+#let make-cover(
+  cover: false,
+  title: none,
+  subtitle: none,
+  authors: (),
+  date: none,
+  abstract: none,
+  abstract-title: none,
+  font: (), // Main or Heading font
+  weight: "bold",
+  is-zh: false
+) = {
+  if cover {
+     page(align(center + horizon)[
+        #if title != none {
+            text(weight: weight, size: 26pt, font: font)[#title]
+        }
+        #if subtitle != none {
+            parbreak()
+            text(weight: weight, size: 18pt)[#subtitle]
+        }
+        #if authors != none and authors != [] {
+          v(2em)
+          let count = authors.len()
+          let ncols = calc.min(count, 3)
+          grid(
+            columns: (1fr,) * ncols,
+            row-gutter: 1.5em,
+            ..authors.map(author => align(center)[
+              #author.name \
+              #author.affiliation \
+              #author.email
+            ])
+          )
+        }
+        #if date != none {
+          v(2em)
+          date
+        }
+     ])
+     pagebreak()
+  }
+}
+
+#let conf(
+  title: none,
+  subtitle: none,
+  authors: (),
+  keywords: (),
+  date: none,
+  abstract-title: none,
+  abstract: none,
+  thanks: none,
+  cols: 1,
+  margin: (x: 1.5in, y: 1.5in),
+  paper: "a4",
+  lang: "zh",
+  region: "CN",
+  font: "auto",
+  fontsize: 10.5pt, // 5号字 (10.5pt) is standard for ctexart
+  mathfont: "auto",
+  codefont: ("FiraCode Nerd Font", "SimHei", "Source Han Sans"),
+  linestretch: 1.25,
+  sectionnumbering: "1.1",
+  linkcolor: none,
+  citecolor: none,
+  filecolor: none,
+  toccolor: none,
+  pagenumbering: "1",
+  toc-own-page: false,
+  toc: false,
+  toc-title: none,
+  toc-depth: none,
+  toc-leading: 1em,
+  heading-spacing-l1: 1.8em,
+  heading-spacing-l2: 1.4em,
+  heading-spacing-l3: 1.2em,
+  list-indent: 1em,
+  figure-caption-position: "bottom",
+  table-caption-position: "top",
+  cover: false,
+  doc,
+) = {
+  // Bilingual setup
+  let is-zh = lang.starts-with("zh")
+
+  // Font defaults based on language
+  let main-font = if font != "auto" {
+    font
+  } else if is-zh {
+    ("Times New Roman", "SimSun", "Noto Serif CJK SC", "Noto Serif")
+  } else {
+    ("Times New Roman", "Noto Serif")
+  }
+
+  let heading-font = if is-zh {
+    ("Times New Roman", "SimHei", "Noto Sans CJK SC")
+  } else {
+    ("Times New Roman",)
+  }
+
+  let heading-weight = if is-zh { "regular" } else { "bold" }
+
+  // Localized terms
+  let abstract-default-title = if is-zh { "摘 要" } else { "Abstract" }
+  let code-supplement = if is-zh { "代码" } else { "Code" }
+
+  set document(
+    title: title,
+    keywords: keywords,
+  )
+  set document(
+      author: authors.map(author => content-to-string(author.name)).join(", ", last: " & "),
+  ) if authors != none and authors != ()
+
+  set page(
+    paper: paper,
+    margin: margin,
+    numbering: pagenumbering,
+    // columns: cols -- Removed to allow per-section column control
+  )
+
+  // Spacing Configuration
+  // let heading-above = 2em
+  // let heading-below = 1em
+  let block-spacing = 1.5em
+
+  // Paragraph settings
+  set par(
+    justify: true,
+    first-line-indent: (amount: 2em, all: true),
+    leading: linestretch * 1em
+  )
+
+  // Font settings
+  set text(lang: lang,
+           font: main-font,
+           region: region,
+           size: fontsize)
+
+
+  // Math Numbering
+  set math.equation(numbering: "(1)")
+  show math.equation: set text(font: mathfont) if mathfont != "auto"
+  show raw: set text(font: codefont) if codefont != none
+
+  // Code block frame styling
+  show raw.where(block: true): block.with(
+    above: block-spacing,
+    below: block-spacing,
+    fill: luma(240),
+    inset: 10pt,
+    radius: 4pt,
+    stroke: (paint: luma(180), thickness: 1pt),
+    width: 100%,
+  )
+
+  // Admonitions (Blockquote styling)
+  show quote.where(block: true): it => {
+    let content_str = content-to-string(it.body)
+     let match = content_str.trim().match(regex("^\[!([A-Z]+)\]"))
+     if match != none {
+         let type = match.captures.first()
+         let config = admonition-dict.at(type, default: none)
+         if config != none {
+             let (color, title) = config
+             block(
+               fill: color.lighten(90%),
+               stroke: (left: 4pt + color),
+               inset: 1em,
+               width: 100%,
+               radius: 2pt,
+             )[
+               #text(weight: "regular", fill: color)[#title]
+               // Regex replace to remove the tag
+               #show regex("^\[![A-Z]+\]"): none
+               #it.body
+             ]
+             return
+         }
+     }
+     pad(left: 1em, it)
+  }
+
+  // Extended TODO markers
+  show regex("\[([>:/\?!])\]"): it => {
+    let text-content = content-to-string(it)
+    let char = text-content.at(1)
+
+    let content = if char == ">" { "🏁" }
+      else if char == ":" { "⏸️" }
+      else if char == "/" { "🛑" }
+      else if char == "?" { "❓" }
+      else if char == "!" { "🔥" }
+      else { none }
+
+    if content != none {
+       text(content)
+    } else {
+       it
+    }
+  }
+
+  // Standard Checkbox Replacements
+  show regex("[\u{2612}]"): "✅"
+  show regex("[\u{2610}]"): "⬜"
+
+  // Caption styling
+  let table-pos = if table-caption-position == "bottom" { bottom } else { top }
+  let fig-pos = if figure-caption-position == "top" { top } else { bottom }
+
+  show figure.where(kind: table): set figure.caption(position: table-pos)
+  show figure.where(kind: image): set figure.caption(position: fig-pos)
+  show figure.where(kind: raw): set figure.caption(position: top)
+  show figure: set block(above: block-spacing, below: block-spacing)
+  show figure.caption: set text(font: main-font, size: 9pt)
+  // Fix indentation for captions (reset to 0, force all: false)
+  show figure.caption: set par(first-line-indent: (amount: 0pt, all: false))
+  // Center all captions
+
+  // Math Numbering
+  set math.equation(numbering: "(1)")
+  show figure.caption: set align(center)
+
+  // Enable code supplement localization
+  show figure.where(kind: raw): set figure(supplement: code-supplement)
+
+  // TOC settings
+  show outline: set text(font: main-font)
+  show outline: set text(fill: rgb(content-to-string(toccolor))) if toccolor != none
+
+  // Math Numbering
+  set math.equation(numbering: "(1)")
+
+  // Heading Styles
+  show heading: set text(font: heading-font, weight: heading-weight)
+  show heading.where(level: 1): set align(center)
+  show heading: set block(below: 1.25em)
+  show heading.where(level: 1): set block(above: heading-spacing-l1)
+  show heading.where(level: 2): set block(above: heading-spacing-l2)
+  show heading.where(level: 3): set block(above: heading-spacing-l3)
+  show heading.where(level: 4): set block(above: 1em)
+  show heading.where(level: 5): set block(above: 1em)
+  show heading: it => it // explicit passthrough not needed with set block, but to ensure no other wrapper breaks
+  set heading(numbering: (..nums) => numbering(sectionnumbering, ..nums) + h(0.75em))
+
+  // List Indentation
+  set list(indent: list-indent)
+  set enum(indent: list-indent)
+
+  show link: set text(fill: rgb(content-to-string(linkcolor))) if linkcolor != none
+  show ref: set text(fill: rgb(content-to-string(citecolor))) if citecolor != none
+  show link: this => {
+    if filecolor != none and type(this.dest) == label {
+      text(this, fill: rgb(content-to-string(filecolor)))
+    } else {
+      text(this)
+    }
+  }
+
+  // Title Logic
+  make-cover(
+    cover: cover,
+    title: title,
+    subtitle: subtitle,
+    authors: authors,
+    date: date,
+    font: main-font,
+    weight: heading-weight,
+    is-zh: is-zh
+  )
+
+  if cover and abstract != none {
+    let abstract_title_text = if abstract-title != none { abstract-title } else if is-zh { "摘 要" } else { "Abstract" }
+    align(center)[#heading(level: 1, numbering: none, outlined: false)[#abstract_title_text]]
+    block(inset: (left: 2em, right: 2em))[
+      #abstract
+    ]
+    pagebreak()
+  }
+
+  if not cover {
+      block(below: 4em, width: 100%)[
+        #if title != none {
+          align(center, block[
+              #text(weight: heading-weight, size: 1.5em, font: main-font)[#title #if thanks != none {
+                  footnote(thanks, numbering: "*")
+                  counter(footnote).update(n => n - 1)
+                }]
+              #(
+                if subtitle != none {
+                  parbreak()
+                  text(weight: heading-weight, size: 1.25em)[#subtitle]
+                }
+               )])
+        }
+
+        #if authors != none and authors != [] {
+          let count = authors.len()
+          let ncols = calc.min(count, 3)
+          grid(
+            columns: (1fr,) * ncols,
+            row-gutter: 1.5em,
+            ..authors.map(author => align(center)[
+              #author.name \
+              #author.affiliation \
+              #author.email
+            ])
+          )
+        }
+
+        #if date != none {
+          align(center)[#block(inset: 1em)[
+              #date
+            ]]
+        }
+
+        #if abstract != none {
+          let abstract_title_text = if abstract-title != none { abstract-title } else { abstract-default-title }
+          block(inset: 2em)[
+            #text(weight: heading-weight, font: heading-font)[#abstract_title_text] #h(1em) #abstract
+          ]
+        }
+      ]
+  }
+
+  make-toc(
+    toc: toc,
+    toc-title: toc-title,
+    toc-depth: toc-depth,
+    toc-leading: toc-leading,
+    toc-own-page: toc-own-page,
+    is-zh: is-zh,
+    font: heading-font,
+    weight: heading-weight
+  )
+
+  if is-zh and font == "auto" {
+    show strong: it => {
+       set text(font: ("Times New Roman", "SimHei"), weight: "regular")
+       show regex("[\x00-\x7F]+"): set text(weight: "bold")
+       it.body
+    }
+    show emph: it => {
+      set text(font: ("Times New Roman", "KaiTi"), style: "normal")
+      show regex("[\x00-\x7F]+"): set text(style: "italic")
+      it.body
+    }
+    if cols > 1 { columns(cols, doc) } else { doc }
+  } else {
+    if cols > 1 { columns(cols, doc) } else { doc }
+  }
+}
+
+$if(smart)$
+$else$
+#set smartquote(enabled: false)
+
+$endif$
+$for(header-includes)$
+$header-includes$
+
+$endfor$
+#show: doc => conf(
+$if(title)$
+  title: [$title$],
+$endif$
+$if(subtitle)$
+  subtitle: [$subtitle$],
+$endif$
+$if(author)$
+  authors: (
+$for(author)$
+$if(author.name)$
+    ( name: [$author.name$],
+      affiliation: [$author.affiliation$],
+      email: [$author.email$] ),
+$else$
+    ( name: [$author$],
+      affiliation: "",
+      email: "" ),
+$endif$
+$endfor$
+    ),
+$endif$
+$if(keywords)$
+  keywords: ($for(keywords)$$keyword$$sep$,$endfor$),
+$endif$
+$if(date)$
+  date: [$date$],
+$endif$
+$if(lang)$
+  lang: "$lang$",
+$endif$
+$if(region)$
+  region: "$region$",
+$endif$
+$if(abstract-title)$
+  abstract-title: [$abstract-title$],
+$endif$
+$if(abstract)$
+  abstract: [$abstract$],
+$endif$
+$if(thanks)$
+  thanks: [$thanks$],
+$endif$
+$if(margin)$
+  margin: ($for(margin/pairs)$$margin.key$: $margin.value$,$endfor$),
+$endif$
+$if(papersize)$
+  paper: "$papersize$",
+$endif$
+$if(mainfont)$
+  font: ("$mainfont$",),
+$endif$
+$if(fontsize)$
+  fontsize: $fontsize$,
+$endif$
+$if(mathfont)$
+  mathfont: ($for(mathfont)$"$mathfont$",$endfor$),
+$endif$
+$if(codefont)$
+  codefont: ($for(codefont)$"$codefont$",$endfor$),
+$endif$
+$if(linestretch)$
+  linestretch: $linestretch$,
+$endif$
+$if(section-numbering)$
+  sectionnumbering: "$section-numbering$",
+$endif$
+  pagenumbering: $if(page-numbering)$"$page-numbering$"$else$none$endif$,
+$if(linkcolor)$
+  linkcolor: [$linkcolor$],
+$endif$
+$if(citecolor)$
+  citecolor: [$citecolor$],
+$endif$
+$if(filecolor)$
+  filecolor: [$filecolor$],
+$endif$
+$if(toccolor)$
+  toccolor: [$toccolor$],
+$endif$
+$if(toc-own-page)$
+  toc-own-page: $toc-own-page$,
+$endif$
+$if(cover)$
+  cover: $cover$,
+$endif$
+  cols: $if(columns)$$columns$$else$1$endif$,
+  toc: $if(toc)$true$else$false$endif$,
+  toc-title: $if(toc-title)$[$toc-title$]$else$none$endif$,
+  toc-depth: $if(toc-depth)$$toc-depth$$else$none$endif$,
+$if(heading-spacing-l1)$
+  heading-spacing-l1: $heading-spacing-l1$,
+$endif$
+$if(heading-spacing-l2)$
+  heading-spacing-l2: $heading-spacing-l2$,
+$endif$
+$if(heading-spacing-l3)$
+  heading-spacing-l3: $heading-spacing-l3$,
+$endif$
+$if(list-indent)$
+  list-indent: $list-indent$,
+$endif$
+$if(toc-leading)$
+  toc-leading: $toc-leading$,
+$endif$
+$if(figure-caption-position)$
+  figure-caption-position: "$figure-caption-position$",
+$endif$
+$if(table-caption-position)$
+  table-caption-position: "$table-caption-position$",
+$endif$
+  doc,
+)
+
+$for(include-before)$
+$include-before$
+
+$endfor$
+
+$body$
+
+$if(citations)$
+$for(nocite-ids)$
+#cite(label("${it}"), form: none)
+$endfor$
+$if(csl)$
+
+#set bibliography(style: "$csl$")
+$elseif(bibliographystyle)$
+
+#set bibliography(style: "$bibliographystyle$")
+$endif$
+$if(bibliography)$
+
+#bibliography(($for(bibliography)$"$bibliography$"$sep$,$endfor$)$if(full-bibliography)$, full: true$endif$)
+$endif$
+$endif$
+$for(include-after)$
+
+$include-after$
+$endfor$
