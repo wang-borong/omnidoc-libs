@@ -1,6 +1,8 @@
 #import "@preview/i-figured:0.2.4" as i-figured
 #let horizontalrule = line(start: (25%,0%), end: (75%,0%))
 
+
+
 #show terms: it => {
   it.children
     .map(child => [
@@ -14,6 +16,69 @@
   inset: 6pt,
   stroke: none
 )
+
+// Three-line table implementation via show rule
+#show table: it => {
+  if it.has("label") and it.label == <three-line-tbl> {
+     it
+  } else {
+     set par(justify: false)
+     let f = it.fields()
+     let _ = if "children" in f { f.remove("children") }
+     let _ = if "stroke" in f { f.remove("stroke") }
+     let pos = it.children
+
+     let cols = f.at("columns", default: 1)
+     let col-count = if type(cols) == int { cols } else if type(cols) == array { cols.len() } else { 1 }
+
+     let header-area = 0
+     let body-area = 0
+
+     for item in pos {
+        if type(item) == content and item.has("func") and item.func() == table.header {
+            if item.has("children") {
+                for child in item.children {
+                    let c = 1
+                    let r = 1
+                    if child.has("func") and child.func() == table.cell {
+                        let cf = child.fields()
+                        c = cf.at("colspan", default: 1)
+                        r = cf.at("rowspan", default: 1)
+                    }
+                    header-area += c * r
+                }
+            }
+        } else if type(item) == content and item.has("func") and (item.func() == table.hline or item.func() == table.vline) {
+            // Skip lines
+        } else {
+            let c = 1
+            let r = 1
+            if type(item) == content and item.has("func") and item.func() == table.cell {
+                let cf = item.fields()
+                c = cf.at("colspan", default: 1)
+                r = cf.at("rowspan", default: 1)
+            }
+            body-area += c * r
+        }
+     }
+
+     let header-rows = int(calc.ceil(float(header-area) / col-count))
+     let total-rows = int(calc.ceil(float(header-area + body-area) / col-count))
+
+     let new-args = ()
+
+     new-args.push(table.hline(y: 0, stroke: 1.5pt))
+     if header-rows > 0 {
+         new-args.push(table.hline(y: header-rows, stroke: 0.75pt))
+     }
+     new-args += pos
+     new-args.push(table.hline(y: total-rows, stroke: 1.5pt))
+
+     [
+       #table(..new-args, ..f, stroke: none) <three-line-tbl>
+     ]
+  }
+}
 
 $if(highlighting-definitions)$
 // syntax highlighting functions from skylighting:
@@ -77,7 +142,7 @@ $endif$
       page(header: none, footer: none, content)
     } else {
       content
-      h(2em)
+      v(5em)
     }
   }
 }
@@ -168,6 +233,7 @@ $endif$
   list-indent: 1em,
   figure-caption-position: "bottom",
   table-caption-position: "top",
+  horizontalrule-spacing: 3em,
   cover: false,
   doc,
 ) = {
@@ -342,6 +408,9 @@ $endif$
   // i-figured setup (Must be before specific show figure styling)
   show heading.where(level: 1): i-figured.reset-counters
   show figure: i-figured.show-figure.with(numbering: "1-1")
+
+  // Horizontal Rule spacing
+  show line.where(start: (25%,0%), end: (75%,0%)): it => block(above: horizontalrule-spacing, below: horizontalrule-spacing, it)
 
   // Caption styling
   let table-pos = if table-caption-position == "bottom" { bottom } else { top }
@@ -628,6 +697,9 @@ $if(figure-caption-position)$
 $endif$
 $if(table-caption-position)$
   table-caption-position: "$table-caption-position$",
+$endif$
+$if(horizontalrule-spacing)$
+  horizontalrule-spacing: $horizontalrule-spacing$,
 $endif$
   doc,
 )
