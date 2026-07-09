@@ -16,6 +16,8 @@
 -- Helper Functions
 -- ============================================================================
 
+local system = require 'pandoc.system'
+
 --- Create a LaTeX raw inline element
 --- @param str string The LaTeX code
 --- @return table A RawInline element
@@ -44,19 +46,6 @@ local function contains_value(list, x)
   return false
 end
 
---- Execute a shell command and return its output
---- @param cmd string The command to execute
---- @return string|nil The command output, or nil on error
-local function execute_command(cmd)
-  local handle = io.popen(cmd)
-  if handle then
-    local output = handle:read("*a")
-    handle:close()
-    return output
-  end
-  return nil
-end
-
 --- Check if a file has a legal extension
 --- @param filename string The filename to check
 --- @param legal_ext table List of legal extensions (without the dot)
@@ -67,6 +56,72 @@ local function check_file_ext(filename, legal_ext)
     return false
   end
   return contains_value(legal_ext, file_ext)
+end
+
+local function basename(filename)
+  return filename:match("[^/\\]+$") or filename
+end
+
+local function join_path(parent, child)
+  if parent == "." then
+    return child
+  end
+  return parent .. "/" .. child
+end
+
+local function is_pruned_dir(dirname)
+  local pruned_dirs = {
+    appendix = true,
+    dac = true,
+    drawio = true,
+    pandoc = true,
+    reference = true,
+    texmf = true,
+    tool = true,
+    [".git"] = true,
+  }
+
+  return pruned_dirs[basename(dirname)] or false
+end
+
+local function list_directory(dirname)
+  if not system.list_directory then
+    return nil
+  end
+
+  local ok, entries = pcall(system.list_directory, dirname)
+  if not ok then
+    return nil
+  end
+  return entries
+end
+
+local function find_image_file(root, image_name, legal_ext)
+  local entries = list_directory(root)
+  if not entries then
+    return nil
+  end
+
+  table.sort(entries)
+  for _, entry in ipairs(entries) do
+    local candidate = join_path(root, entry)
+    local candidate_base = basename(candidate)
+
+    if not is_pruned_dir(candidate) then
+      local child_entries = list_directory(candidate)
+      if child_entries then
+        local found = find_image_file(candidate, image_name, legal_ext)
+        if found then
+          return found
+        end
+      elseif candidate_base:sub(1, #image_name) == image_name and
+             check_file_ext(candidate_base, legal_ext) then
+        return candidate:gsub("^%./", "")
+      end
+    end
+  end
+
+  return nil
 end
 
 -- ============================================================================
@@ -124,30 +179,18 @@ local function proc_image(image)
   -- Legal image file extensions
   local legal_ext = {'pdf', 'png', 'jpg', 'ps', 'fig', 'eps'}
 
-  -- Build a find command to search for the image file
-  -- Exclude certain directories from the search
   local image_name = image.src:match("[^/]*$")
-  local cmd = string.format(
-    'find . -type d %s %s -o -name "%s*" -print | sed "/.svg/d"',
-    '\\( -name appendix -o -name dac -o -name drawio -o -name pandoc',
-    '-o -name reference -o -name texmf -o -name tool -o -name .git \\) -prune',
-    image_name:gsub("%-", "%%-")  -- Escape hyphens for the shell
-  )
-
-  local output = execute_command(cmd)
-  if not output or output:gsub("\n$", "") == '' then
+  local resolved_path = find_image_file(".", image_name, legal_ext)
+  if resolved_path then
+    image.src = resolved_path
     return image
   end
 
-  -- Process the find output to find matching image files
-  for img_path in output:gmatch("([^\n]*)\n?") do
-    if string.find(img_path, image.src:gsub("%-", "%%-")) then
-      -- Extract relative path
-      local relative_path = img_path:gsub("%./.-/(.*)", "%1")
-      if check_file_ext(relative_path, legal_ext) then
-        image.src = relative_path
-        break
-      end
+  if check_file_ext(image.src, legal_ext) then
+    local fh = io.open(image.src, "rb")
+    if fh then
+      fh:close()
+      return image
     end
   end
 

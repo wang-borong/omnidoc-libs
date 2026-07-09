@@ -198,41 +198,53 @@ local tikz_template = [[
 --- @return function|nil Converter function(pdf_file, outfile), or nil if unsupported
 local function convert_with_inkscape(filetype)
   -- Check Inkscape version to determine command syntax
-  local inkscape_v_string = io.popen(inkscape_path .. " --version"):read()
-  if not inkscape_v_string then
+  local ok, inkscape_v_string = pcall(
+    pandoc.pipe,
+    inkscape_path,
+    {"--version"},
+    ""
+  )
+  if not ok or not inkscape_v_string then
     return nil
   end
   
   local inkscape_v_major = inkscape_v_string:gmatch("([0-9]*)%.")()
-  local isv1 = tonumber(inkscape_v_major) >= 1
+  local isv1 = (tonumber(inkscape_v_major) or 0) >= 1
 
-  -- Build command argument template based on version
-  local cmd_arg = isv1 and '"%s" "%s" -o "%s" ' or
-                  '"%s" --without-gui --file="%s" '
+  local function build_args(pdf_file, outfile)
+    if isv1 and filetype == 'png' then
+      return {pdf_file, "-o", outfile, "--export-type=png", "--export-dpi=300"}
+    end
+    if isv1 and filetype == 'svg' then
+      return {pdf_file, "-o", outfile, "--export-type=svg", "--export-plain-svg"}
+    end
+    if filetype == 'png' then
+      return {"--without-gui", "--file=" .. pdf_file, "--export-png=" .. outfile, "--export-dpi=300"}
+    end
+    if filetype == 'svg' then
+      return {"--without-gui", "--file=" .. pdf_file, "--export-plain-svg=" .. outfile}
+    end
+    return nil
+  end
 
-  -- Build output arguments based on format
-  local output_args
   if filetype == 'png' then
-    local png_arg = isv1 and '--export-type=png' or '--export-png="%s"'
-    output_args = png_arg .. ' --export-dpi=300'
+    -- Supported.
   elseif filetype == 'svg' then
-    output_args = isv1 and '--export-type=svg --export-plain-svg' or
-                   '--export-plain-svg="%s"'
+    -- Supported.
   else
     return nil  -- Unsupported format
   end
 
   -- Return converter function
   return function(pdf_file, outfile)
-    local inkscape_command = string.format(
-      cmd_arg .. output_args,
-      inkscape_path,
-      pdf_file,
-      outfile
-    )
-    local command_output = io.popen(inkscape_command)
-    if command_output then
-      command_output:close()
+    local args = build_args(pdf_file, outfile)
+    if not args then
+      error(string.format("Don't know how to convert pdf to %s.", filetype))
+    end
+
+    local success, err = pcall(pandoc.pipe, inkscape_path, args, "")
+    if not success then
+      error("Inkscape conversion failed: " .. tostring(err))
     end
   end
 end
@@ -317,12 +329,19 @@ local function py2image(code, filetype)
   f:write(extended_code)
   f:close()
 
-  -- Execute Python in the desired environment
-  local pycmd = python_path .. ' ' .. pyfile
-  local command = python_activate_path and
-                  python_activate_path .. ' && ' .. pycmd or
-                  pycmd
-  os.execute(command)
+  if python_activate_path then
+    io.stderr:write(
+      "Warning: activate_python_path is ignored by diagram-generator.lua; " ..
+      "set python_path to the virtualenv Python executable instead.\n"
+    )
+  end
+
+  local success, py_err = pcall(pandoc.pipe, python_path, {pyfile}, "")
+  if not success then
+    os.remove(pyfile)
+    os.remove(outfile)
+    error("Python diagram generation failed: " .. tostring(py_err))
+  end
 
   -- Read the generated image
   local r = io.open(outfile, 'rb')
@@ -429,12 +448,22 @@ local function create_directory_and_write_file(directory, file_name, binary_data
   local full_path = directory .. "/" .. file_name
 
   -- Create directory if necessary
-  if not os.execute("[ -d " .. directory .. " ]") then
-    os.execute("mkdir -p " .. directory)
+  local created = false
+  if system.make_directory then
+    created = pcall(system.make_directory, directory, true)
+  end
+  if not created then
+    local ok, mkdir_err = pcall(pandoc.pipe, "mkdir", {"-p", directory}, "")
+    if not ok then
+      error("Could not create directory '" .. directory .. "': " .. tostring(mkdir_err))
+    end
   end
 
   -- Write file only if it doesn't exist (cache optimization)
-  if not os.execute("[ -f " .. full_path .. " ]") then
+  local existing = io.open(full_path, "rb")
+  if existing then
+    existing:close()
+  else
     if not write_binary_data_to_file(full_path, binary_data) then
       return false
     end

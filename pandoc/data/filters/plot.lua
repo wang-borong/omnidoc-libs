@@ -44,6 +44,21 @@
 -- Configuration
 -- ============================================================================
 
+local system = require 'pandoc.system'
+
+local function ensure_directory(directory)
+  local created = false
+  if system.make_directory then
+    created = pcall(system.make_directory, directory, true)
+  end
+  if not created then
+    local ok, mkdir_err = pcall(pandoc.pipe, "mkdir", {"-p", directory}, "")
+    if not ok then
+      error("Could not create directory '" .. directory .. "': " .. tostring(mkdir_err))
+    end
+  end
+end
+
 --- Directory for rendered images
 local render_dir = "figures"
 
@@ -51,12 +66,8 @@ local render_dir = "figures"
 local code_dir = "diagascode"
 
 -- Create directories if they don't exist
-if not os.execute("[ -d " .. render_dir .. " ]") then
-  os.execute("mkdir -p " .. render_dir)
-end
-if not os.execute("[ -d " .. code_dir .. " ]") then
-  os.execute("mkdir -p " .. code_dir)
-end
+ensure_directory(render_dir)
+ensure_directory(code_dir)
 
 -- ============================================================================
 -- Helper Functions
@@ -93,7 +104,12 @@ end
 --- @param filename string The file path
 --- @return boolean True if the file exists
 local function file_exists(filename)
-  return os.execute("[ -f " .. filename .. " ]")
+  local file = io.open(filename, "rb")
+  if file then
+    file:close()
+    return true
+  end
+  return false
 end
 
 --- Check if a command is available in PATH
@@ -101,7 +117,8 @@ end
 --- @param command string The command name
 --- @return boolean True if the command is available
 local function which(command)
-  return os.execute("which " .. command .. ' >/dev/null 2>&1')
+  local ok = pcall(pandoc.pipe, "which", {command}, "")
+  return ok
 end
 
 --- Convert SVG to other formats using rsvg-convert
@@ -116,8 +133,12 @@ local function rsvg_convert(svg, output, format)
     return false
   end
 
-  local result = os.execute('rsvg-convert -f ' .. format .. ' -o ' ..
-                           output .. ' ' .. svg)
+  local result = pcall(
+    pandoc.pipe,
+    "rsvg-convert",
+    {"-f", format, "-o", output, svg},
+    ""
+  )
 
   if not result then
     print("\27[31mPlot Warning: rsvg convert failed! -> " .. svg .. "\27[m")
@@ -270,12 +291,15 @@ local function abcm2ps(code, filetype, fname, cname)
   local success, img = pandoc.pipe("abcm2ps", {"-", "-c", "-S", "-E", "-O", base_name}, code)
   
   -- Convert EPS to PDF
-  os.execute("epspdf " .. base_name .. "001.eps " .. base_name .. ".pdf")
+  pandoc.pipe("epspdf", {base_name .. "001.eps", base_name .. ".pdf"}, "")
   
   -- Convert PDF to requested format if needed
   if filetype ~= 'pdf' then
-    os.execute("pdftocairo -" .. filetype .. " " .. base_name .. ".pdf " ..
-               base_name .. "." .. filetype)
+    pandoc.pipe(
+      "pdftocairo",
+      {"-" .. filetype, base_name .. ".pdf", base_name .. "." .. filetype},
+      ""
+    )
   end
 
   return success, img
@@ -311,8 +335,11 @@ local function tikz(code, filetype, fname, cname, package)
 
   -- Convert PDF to requested format if needed
   if filetype ~= 'pdf' then
-    os.execute("pdftocairo -" .. filetype .. " " .. base_name .. ".pdf " ..
-               base_name .. "." .. filetype)
+    pandoc.pipe(
+      "pdftocairo",
+      {"-" .. filetype, base_name .. ".pdf", base_name .. "." .. filetype},
+      ""
+    )
   end
 
   return success, img

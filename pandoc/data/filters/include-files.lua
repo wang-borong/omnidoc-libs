@@ -108,6 +108,14 @@ end
 --- @param include_path string Directory path of the included file
 --- @return table Transformed list of block elements
 local function update_contents(blocks, shift_by, include_path)
+  local function update_relative_code_path(attributes, key)
+    if attributes[key] and
+       path.is_relative(attributes[key]) and
+       update_cont then
+      attributes[key] = path.normalize(path.join({include_path, attributes[key]}))
+    end
+  end
+
   local update_contents_filter = {
     -- Shift headings in block list by given number
     Header = function(header)
@@ -139,12 +147,8 @@ local function update_contents(blocks, shift_by, include_path)
     end,
     -- Update path for include-code-files.lua filter style CodeBlocks
     CodeBlock = function(cb)
-      if cb.attributes.include and 
-         path.is_relative(cb.attributes.include) and 
-         update_cont then
-        cb.attributes.include =
-          path.normalize(path.join({include_path, cb.attributes.include}))
-      end
+      update_relative_code_path(cb.attributes, 'include-code')
+      update_relative_code_path(cb.attributes, 'include')
       return cb
     end
   }
@@ -323,9 +327,9 @@ transclude = function(cb)
   local blocks = List:new()
 
   -- Process each line in the code block as a file path
-  for line in cb.text:gmatch('[^\n]+') do
+  for raw_line in cb.text:gmatch('[^\n]+') do
     -- Trim whitespace and skip comments/empty lines
-    line = line:match('^%s*(.-)%s*$') or line
+    local line = raw_line:match('^%s*(.-)%s*$') or raw_line
     if line ~= '' and line:sub(1, 2) ~= '//' then
       local file_blocks = process_included_file(line, format, shift_heading_level_by)
       if file_blocks then
