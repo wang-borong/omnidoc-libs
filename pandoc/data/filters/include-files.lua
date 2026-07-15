@@ -69,6 +69,44 @@ end
 --- @param doc table The Pandoc document
 --- @return table The processed document
 function Pandoc(doc)
+  -- Included files are parsed independently, so Pandoc may assign the same
+  -- automatic identifier to recurring headings such as "Exercises" or
+  -- "Summary" in every chapter.  Once the documents are transcluded those
+  -- identifiers share one global namespace.  EPUB navigation generation in
+  -- particular can otherwise resolve later TOC entries to the first matching
+  -- chapter.  Make identifiers unique in document order, following Pandoc's
+  -- usual -1, -2, ... suffix convention.
+  local used_identifiers = {}
+  local deduplicate_headers = {
+    Header = function(header)
+      local identifier = header.identifier
+      if identifier == nil or identifier == '' then
+        return header
+      end
+
+      if not used_identifiers[identifier] then
+        used_identifiers[identifier] = true
+        return header
+      end
+
+      local suffix = 1
+      local candidate = identifier .. '-' .. suffix
+      while used_identifiers[candidate] do
+        suffix = suffix + 1
+        candidate = identifier .. '-' .. suffix
+      end
+
+      header.identifier = candidate
+      used_identifiers[candidate] = true
+      return header
+    end
+  }
+
+  doc.blocks = pandoc.walk_block(
+    pandoc.Div(doc.blocks),
+    deduplicate_headers
+  ).content
+
   -- If a title was set from a shifted header, update the document meta
   if document_title_inlines then
     -- Convert Inlines to MetaInlines to preserve formatting
