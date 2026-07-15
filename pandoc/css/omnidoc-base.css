@@ -22,9 +22,9 @@
 .omni-display-math .math.display {
   display: inline-block;
   width: auto;
-  max-width: 100%;
+  max-width: none;
   margin: 0 auto;
-  overflow-x: auto;
+  overflow: visible;
   vertical-align: middle;
 }
 
