@@ -1,6 +1,13 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{omni-engineering-book}[2026/07/15 v0.1 OmniDoc engineering textbook theme]
 
+\RequirePackage{iftex}
+\ifXeTeX
+  \RequirePackage{fontspec}
+  \RequirePackage{xeCJK}
+\else
+  \PackageError{omni-engineering-book}{XeLaTeX is required}{Use OmniDoc's default xelatex engine for this theme.}
+\fi
 \RequirePackage{titlesec}
 \RequirePackage{fancyhdr}
 \RequirePackage{enumitem}
@@ -10,6 +17,7 @@
 \RequirePackage{colortbl}
 \RequirePackage{tikz}
 \RequirePackage{etoolbox}
+\RequirePackage{omni-admonitions}
 
 \providecommand{\OmniBookSubtitle}{}
 \providecommand{\OmniBookImprint}{}
@@ -29,6 +37,7 @@
 \setlength{\parskip}{0.3em}
 \setlist{nosep,leftmargin=2em,topsep=0.4em}
 \setlength{\emergencystretch}{3em}
+\setlength{\headheight}{20pt}
 
 \titleformat{\part}[display]
   {\centering\sffamily\bfseries\color{CircuitNavy}}

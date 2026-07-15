@@ -171,6 +171,20 @@ local function proc_image(image)
     return image
   end
 
+  -- Prefer a pre-rendered PDF sibling for SVG sources when available. This
+  -- keeps XeLaTeX builds deterministic and avoids requiring shell-escape and
+  -- Inkscape merely to consume an SVG that the project already exports for
+  -- EPUB/HTML.
+  if image.src:lower():match('%.svg$') then
+    local pdf_path = image.src:gsub('%.[sS][vV][gG]$', '.pdf')
+    local pdf = io.open(pdf_path, 'rb')
+    if pdf then
+      pdf:close()
+      image.src = pdf_path
+      return image
+    end
+  end
+
   -- Skip images that are already in figures/ or images/ directories
   if image.src:match('figures?/', 1) or image.src:match('images?/') then
     return nil

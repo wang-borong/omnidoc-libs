@@ -41,3 +41,11 @@ project selects `[theme] name = "engineering-book"`. It provides the cover,
 engineering color palette, CJK typography, headings, headers and footers,
 quote boxes, and alternating table rows. The subtitle and imprint commands are
 optional; without them, the subtitle is omitted and the document date is used.
+The package loads its required XeLaTeX/CJK and admonition support itself, so a
+theme selection is sufficient to compile its declared components.
+
+For source images that remain SVG in HTML and EPUB, place a pre-rendered PDF
+with the same basename next to the SVG (for example, `diagram.svg` and
+`diagram.pdf`). PDF/LaTeX builds select that sibling deterministically without
+requiring shell escape or Inkscape, and OmniDoc records both assets in the
+target dependency graph.
