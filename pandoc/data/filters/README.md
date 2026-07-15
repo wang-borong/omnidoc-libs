@@ -55,6 +55,14 @@ parsed, and the result is added to the document.
 
 Metadata from included files is discarded.
 
+### display-math.lua
+
+Wraps a paragraph whose only content is a display formula in
+`div.omni-display-math` for HTML and EPUB output. The shared
+`pandoc/css/omnidoc-base.css` uses that semantic wrapper to center standalone
+MathML while leaving inline formulas unchanged and allowing long equations to
+scroll horizontally.
+
 ##### Shifting Headings
 
 The default is to include the subdocuments unchanged, but it can be convenient
