@@ -106,8 +106,10 @@ end
 function get_vars(meta)
   include_auto = meta['include-auto'] and true or false
   update_cont = meta['update-contents'] and true or false
-  depfile_path = meta['omnidoc-include-depfile'] and
-    pandoc.utils.stringify(meta['omnidoc-include-depfile']) or nil
+  local generic_depfile = meta['omnidoc-depfile-include-files']
+  local legacy_depfile = meta['omnidoc-include-depfile']
+  depfile_path = generic_depfile and pandoc.utils.stringify(generic_depfile) or
+    (legacy_depfile and pandoc.utils.stringify(legacy_depfile) or nil)
   included_dependencies = {}
   return nil
 end

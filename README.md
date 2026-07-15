@@ -39,3 +39,25 @@ manifest version, creates `omnidoc-libs-v<version>.tar.gz`, writes its external
 SHA-256 file, extracts the archive, and verifies the packaged payload again.
 CI builds the archive twice and requires byte-for-byte identical output. A
 matching `v<version>` tag publishes both files as GitHub release assets.
+
+## Lua filter dependency protocol
+
+For every active Lua filter, OmniDoc passes a metadata field named from the
+normalized filter basename:
+
+```text
+omnidoc-depfile-<filter-stem>=/absolute/path/to/<filter-stem>.d
+```
+
+For example, `filters/custom-reader.lua` receives
+`omnidoc-depfile-custom-reader` and should write:
+
+```text
+# omnidoc-depfile-v1
+/absolute/path/to/an-actually-read-resource.json
+```
+
+Dependencies may be absolute or project-relative. OmniDoc consumes depfiles
+only for filters active in the current output policy, content-hashes external
+resources, and ignores malformed or stale depfiles. The include filters accept
+this generic key while retaining their legacy metadata keys for compatibility.

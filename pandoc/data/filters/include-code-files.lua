@@ -54,8 +54,10 @@ local function record_dependency(file_path)
 end
 
 local function configure_depfile(meta)
-  depfile_path = meta['omnidoc-include-code-depfile'] and
-    pandoc.utils.stringify(meta['omnidoc-include-code-depfile']) or nil
+  local generic_depfile = meta['omnidoc-depfile-include-code-files']
+  local legacy_depfile = meta['omnidoc-include-code-depfile']
+  depfile_path = generic_depfile and pandoc.utils.stringify(generic_depfile) or
+    (legacy_depfile and pandoc.utils.stringify(legacy_depfile) or nil)
   included_dependencies = {}
   return nil
 end
