@@ -10,6 +10,18 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "manifest.toml"
 
 
+def contract_path(relative: str) -> pathlib.Path:
+    path = pathlib.PurePosixPath(relative)
+    if (
+        not relative
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or "\\" in relative
+    ):
+        raise ValueError(f"unsafe manifest path: {relative}")
+    return ROOT.joinpath(*path.parts)
+
+
 def load_manifest() -> dict:
     with MANIFEST_PATH.open("rb") as stream:
         manifest = tomllib.load(stream)
@@ -23,11 +35,18 @@ def load_manifest() -> dict:
 def payload_files(manifest: dict) -> list[pathlib.Path]:
     files: list[pathlib.Path] = []
     for root_name in manifest["payload_roots"]:
-        root = ROOT / root_name
+        root = contract_path(root_name)
+        if root.is_symlink():
+            raise ValueError(f"symbolic link is not allowed: {root_name}")
         if root.is_file():
             files.append(root)
         elif root.is_dir():
-            files.extend(path for path in root.rglob("*") if path.is_file())
+            for path in root.rglob("*"):
+                relative = path.relative_to(ROOT).as_posix()
+                if path.is_symlink():
+                    raise ValueError(f"symbolic link is not allowed: {relative}")
+                if path.is_file():
+                    files.append(path)
         else:
             raise ValueError(f"payload root does not exist: {root_name}")
     return sorted(files, key=lambda path: path.relative_to(ROOT).as_posix())
@@ -59,6 +78,7 @@ def read_checksums(path: pathlib.Path) -> dict[str, str]:
             raise ValueError(f"invalid checksum line {line_number}") from error
         if len(checksum) != 64 or any(char not in "0123456789abcdef" for char in checksum):
             raise ValueError(f"invalid SHA-256 on line {line_number}")
+        contract_path(relative)
         if relative in checksums:
             raise ValueError(f"duplicate checksum path: {relative}")
         checksums[relative] = checksum
@@ -77,7 +97,8 @@ def verify_required_resources(manifest: dict) -> list[str]:
     return [
         relative
         for relative in manifest["required_resources"]
-        if not (ROOT / relative).is_file()
+        if not contract_path(relative).is_file()
+        or contract_path(relative).is_symlink()
     ]
 
 
@@ -88,7 +109,9 @@ def main() -> int:
 
     try:
         manifest = load_manifest()
-        checksum_path = ROOT / manifest["checksum_file"]
+        checksum_path = contract_path(manifest["checksum_file"])
+        if checksum_path.is_symlink():
+            raise ValueError("checksum_file must not be a symbolic link")
         expected = generated_checksums(manifest)
         missing_required = verify_required_resources(manifest)
         if missing_required:
