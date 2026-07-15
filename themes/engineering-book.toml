@@ -18,6 +18,21 @@ lua_filters = [
 
 [requirements]
 fonts = ["Noto Serif CJK SC", "Noto Sans CJK SC", "Noto Sans Mono CJK SC"]
+system_latex_packages = [
+  "array",
+  "booktabs",
+  "colortbl",
+  "enumitem",
+  "etoolbox",
+  "fancyhdr",
+  "fontspec",
+  "iftex",
+  "tcolorbox",
+  "tikz",
+  "titlesec",
+  "xcolor",
+  "xeCJK",
+]
 
 [metadata.defaults]
 lang = "zh-CN"

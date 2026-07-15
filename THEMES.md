@@ -43,6 +43,9 @@ quote boxes, and alternating table rows. The subtitle and imprint commands are
 optional; without them, the subtitle is omitted and the document date is used.
 The package loads its required XeLaTeX/CJK and admonition support itself, so a
 theme selection is sufficient to compile its declared components.
+Its manifest also declares the system LaTeX packages resolved through
+`kpsewhich`; OmniDoc can validate their presence and locks the resolved `.sty`
+version/content identities for PDF builds.
 
 For source images that remain SVG in HTML and EPUB, place a pre-rendered PDF
 with the same basename next to the SVG (for example, `diagram.svg` and
