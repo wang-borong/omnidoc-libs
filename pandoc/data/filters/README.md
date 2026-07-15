@@ -55,6 +55,16 @@ parsed, and the result is added to the document.
 
 Metadata from included files is discarded.
 
+### OmniDoc dependency files
+
+OmniDoc passes `omnidoc-include-depfile` and
+`omnidoc-include-code-depfile` metadata paths during project builds. The two
+filters rewrite their own `# omnidoc-depfile-v1` files with the normalized
+absolute paths they successfully read. This makes recursive Markdown and code
+includes authoritative inputs to the next cache/lock calculation while
+keeping the filters usable with ordinary Pandoc commands when those metadata
+keys are absent.
+
 ### display-math.lua
 
 Wraps a paragraph whose only content is a display formula in

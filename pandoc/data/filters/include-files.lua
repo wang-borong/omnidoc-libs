@@ -52,6 +52,50 @@ local last_heading_level = 0
 --- Stores title content from headers shifted to level 0 (as Inlines to preserve formatting)
 local document_title_inlines = nil
 
+--- Optional depfile populated with every Markdown file actually transcluded.
+local depfile_path = nil
+local included_dependencies = {}
+
+local function absolute_dependency(file_path)
+  local resolved = file_path
+  if path.is_relative(resolved) then
+    resolved = path.join({system.get_working_directory(), resolved})
+  end
+  return path.normalize(resolved)
+end
+
+local function record_dependency(file_path)
+  local resolved = absolute_dependency(file_path)
+  if not resolved:find('[\r\n]') then
+    included_dependencies[resolved] = true
+  end
+end
+
+local function write_depfile()
+  if not depfile_path or depfile_path == '' then
+    return
+  end
+  local dependencies = {}
+  for dependency, _ in pairs(included_dependencies) do
+    table.insert(dependencies, dependency)
+  end
+  table.sort(dependencies)
+  local file, error_message = io.open(depfile_path, 'w')
+  if not file then
+    io.stderr:write(string.format(
+      "Warning: Cannot write include depfile '%s': %s\n",
+      depfile_path,
+      tostring(error_message)
+    ))
+    return
+  end
+  file:write('# omnidoc-depfile-v1\n')
+  for _, dependency in ipairs(dependencies) do
+    file:write(dependency, '\n')
+  end
+  file:close()
+end
+
 -- ============================================================================
 -- Meta Processing
 -- ============================================================================
@@ -62,6 +106,9 @@ local document_title_inlines = nil
 function get_vars(meta)
   include_auto = meta['include-auto'] and true or false
   update_cont = meta['update-contents'] and true or false
+  depfile_path = meta['omnidoc-include-depfile'] and
+    pandoc.utils.stringify(meta['omnidoc-include-depfile']) or nil
+  included_dependencies = {}
   return nil
 end
 
@@ -114,6 +161,7 @@ function Pandoc(doc)
     -- Reset for next document (if processing multiple documents)
     document_title_inlines = nil
   end
+  write_depfile()
   return doc
 end
 
@@ -231,6 +279,7 @@ local function read_included_file(file_path, format)
   -- Read file content
   local file_content = fh:read('*a')
   fh:close()
+  record_dependency(file_path)
 
   -- Parse file content
   local success, result = pcall(function()

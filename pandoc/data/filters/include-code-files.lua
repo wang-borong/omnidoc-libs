@@ -32,6 +32,60 @@
 -- Helper Functions
 -- ============================================================================
 
+local path = require 'pandoc.path'
+local system = require 'pandoc.system'
+
+local depfile_path = nil
+local included_dependencies = {}
+
+local function absolute_dependency(file_path)
+  local resolved = file_path
+  if path.is_relative(resolved) then
+    resolved = path.join({system.get_working_directory(), resolved})
+  end
+  return path.normalize(resolved)
+end
+
+local function record_dependency(file_path)
+  local resolved = absolute_dependency(file_path)
+  if not resolved:find('[\r\n]') then
+    included_dependencies[resolved] = true
+  end
+end
+
+local function configure_depfile(meta)
+  depfile_path = meta['omnidoc-include-code-depfile'] and
+    pandoc.utils.stringify(meta['omnidoc-include-code-depfile']) or nil
+  included_dependencies = {}
+  return nil
+end
+
+local function write_depfile(doc)
+  if not depfile_path or depfile_path == '' then
+    return doc
+  end
+  local dependencies = {}
+  for dependency, _ in pairs(included_dependencies) do
+    table.insert(dependencies, dependency)
+  end
+  table.sort(dependencies)
+  local file, error_message = io.open(depfile_path, 'w')
+  if not file then
+    io.stderr:write(string.format(
+      "Warning: Cannot write include-code depfile '%s': %s\n",
+      depfile_path,
+      tostring(error_message)
+    ))
+    return doc
+  end
+  file:write('# omnidoc-depfile-v1\n')
+  for _, dependency in ipairs(dependencies) do
+    file:write(dependency, '\n')
+  end
+  file:close()
+  return doc
+end
+
 --- Remove leading whitespace from a line
 --- This function removes the specified number of leading spaces from a line.
 --- If the line doesn't have enough leading spaces, it removes all leading spaces.
@@ -214,6 +268,7 @@ local function transclude(cb)
       cb.attr
     )
   end
+  record_dependency(file_path)
 
   -- Warn if no lines were included
   if included_lines == 0 then
@@ -242,5 +297,7 @@ end
 -- ============================================================================
 
 return {
-  { CodeBlock = transclude }
+  { Meta = configure_depfile },
+  { CodeBlock = transclude },
+  { Pandoc = write_depfile }
 }
