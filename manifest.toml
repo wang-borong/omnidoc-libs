@@ -15,6 +15,7 @@ required_resources = [
   "pandoc/data/filters/display-math.lua",
   "pandoc/data/filters/admonition.lua",
   "pandoc/data/templates/pantext.latex",
+  "pandoc/headers/engineering-book.tex",
   "pandoc/crossref.yaml",
   "texmf/tex/common/omni.sty",
   "texmf/tex/common/omni-admonitions.sty",
