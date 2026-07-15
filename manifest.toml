@@ -4,7 +4,7 @@ compatible_omnidoc = ">=1.3.0,<2.0.0"
 compatible_pandoc = ">=3.0,<4.0"
 checksum_algorithm = "sha256"
 checksum_file = "checksums.sha256"
-payload_roots = ["THEMES.md", "image", "pandoc", "texmf"]
+payload_roots = ["THEMES.md", "image", "pandoc", "texmf", "themes"]
 
 required_resources = [
   "pandoc/css/omnidoc-base.css",
@@ -19,4 +19,5 @@ required_resources = [
   "texmf/tex/common/omni.sty",
   "texmf/tex/common/omni-admonitions.sty",
   "texmf/tex/common/omni-engineering-book.sty",
+  "themes/engineering-book.toml",
 ]

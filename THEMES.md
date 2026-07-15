@@ -1,5 +1,14 @@
 # OmniDoc shared themes
 
+Theme bundles have machine-readable manifests under `themes/`. Inspect and
+validate the installed contracts with:
+
+```bash
+omnidoc theme list
+omnidoc theme inspect engineering-book
+omnidoc theme validate engineering-book
+```
+
 ## Engineering textbook
 
 The engineering textbook theme provides matching PDF, HTML, and EPUB styles.
