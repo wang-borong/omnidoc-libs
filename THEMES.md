@@ -22,8 +22,9 @@ version = "1"
 compatibility = "readium"
 ```
 
-OmniDoc resolves the matching HTML/EPUB CSS, Lua filters, and PDF header from
-the bundle manifest. HTML and EPUB use the same responsive typography,
+OmniDoc resolves the matching HTML/EPUB CSS, Lua filters, PDF header, and
+format-specific template from the bundle manifest. HTML and EPUB use the same
+responsive typography,
 admonition styling, MathML layout, tables, code blocks, and dark mode. Desktop
 HTML is centered at a maximum reading width of 56rem.
 
