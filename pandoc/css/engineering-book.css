@@ -213,15 +213,14 @@ math[display="inline"] {
   vertical-align: -0.14em;
 }
 
-/* Long inline or mixed prose/equation runs can exceed a narrow viewport.
-   Keep the overflow local to the paragraph instead of widening the book. */
-p:has(> math[display="inline"]),
-p:has(> .math.inline),
-p:has(> math[display="block"]),
-p:has(> .math.display) {
+/* Keep TeX-style inline math local to its run. Avoid relational selectors:
+   EPUB 3.2 validators and older readers do not consistently parse :has(). */
+.math.inline {
+  display: inline-block;
   max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
+  vertical-align: -0.14em;
 }
 
 /* Keep paginated EPUB engines from detaching lists from document flow. */
