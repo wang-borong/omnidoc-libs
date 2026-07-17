@@ -87,7 +87,7 @@ TEXMFHOME="$root/texmf//:" pandoc "$work/probe.md" \
   --include-in-header="$root/pandoc/headers/emoji.tex" \
   -t latex \
   -o "$work/probe.tex"
-rg -Fq '\\omnidocEmoji{1f31f}{1f31f}' "$work/probe.tex"
+rg -Fq '\omnidocEmoji{1f31f}{1f31f}' "$work/probe.tex"
 ! rg -Fq '🌟' "$work/probe.tex"
 
 echo "Pandoc built-in LaTeX template contract passed"

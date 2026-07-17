@@ -6,7 +6,7 @@ packages used by OmniDoc.
 ## Compatibility
 
 The machine-readable compatibility and payload contract is stored in
-`manifest.toml`. Version 1.0.2 targets OmniDoc 1.3.x and Pandoc 3.x.
+`manifest.toml`. Version 1.1.0 targets OmniDoc 1.4.x and Pandoc 3.x.
 
 ## Verify a checkout
 
@@ -38,7 +38,7 @@ Build the deterministic release archive locally with:
 
 ```bash
 scripts/package-release.sh dist
-OMNIDOC_RELEASE_TAG=v1.0.2 scripts/package-release.sh dist
+OMNIDOC_RELEASE_TAG=v1.1.0 scripts/package-release.sh dist
 ```
 
 The command verifies all payload checksums, checks an optional tag against the
