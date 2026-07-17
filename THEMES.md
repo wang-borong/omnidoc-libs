@@ -22,9 +22,10 @@ version = "1"
 compatibility = "readium"
 ```
 
-OmniDoc resolves the matching HTML/EPUB CSS, Lua filters, PDF header, and
-format-specific template from the bundle manifest. HTML and EPUB use the same
-responsive typography,
+OmniDoc resolves the matching HTML/EPUB CSS, Lua filters, and PDF header from
+the bundle manifest. PDF generation intentionally uses Pandoc's built-in,
+version-matched LaTeX template; the engineering design is injected through the
+header and `omni-engineering-book.sty`. HTML and EPUB use the same responsive typography,
 admonition styling, MathML layout, tables, code blocks, and dark mode. Desktop
 HTML is centered at a maximum reading width of 56rem.
 
@@ -47,6 +48,14 @@ theme selection is sufficient to compile its declared components.
 Its manifest also declares the system LaTeX packages resolved through
 `kpsewhich`; OmniDoc can validate their presence and locks the resolved `.sty`
 version/content identities for PDF builds.
+
+This split is deliberate: do not copy Pandoc's full `default.latex` into the
+theme. Inspect the active upstream contract with `pandoc -D latex`, keep visual
+customization in the `.sty` package, and use Pandoc's supported
+`header-includes`, `include-before`, and `include-after` hooks for project-level
+extensions. `scripts/check-pandoc-latex-template.sh` verifies those upstream
+hooks and compiles a representative themed document against the installed
+Pandoc version.
 
 For source images that remain SVG in HTML and EPUB, place a pre-rendered PDF
 with the same basename next to the SVG (for example, `diagram.svg` and

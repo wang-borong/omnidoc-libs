@@ -6,7 +6,7 @@ packages used by OmniDoc.
 ## Compatibility
 
 The machine-readable compatibility and payload contract is stored in
-`manifest.toml`. Version 1.0.1 targets OmniDoc 1.3.x and Pandoc 3.x.
+`manifest.toml`. Version 1.0.2 targets OmniDoc 1.3.x and Pandoc 3.x.
 
 ## Verify a checkout
 
@@ -14,6 +14,13 @@ The machine-readable compatibility and payload contract is stored in
 python3 scripts/verify_manifest.py
 scripts/smoke-test.sh
 ```
+
+LaTeX themes use Pandoc's own current default template rather than a vendored
+copy. Run `pandoc -D latex` to inspect that template; the smoke test checks its
+required extension hooks and compiles the engineering theme against it. Keep
+custom presentation in theme `.sty` files and header/include hooks. The legacy
+`pantext*.latex` files remain only for projects that explicitly selected them
+and are not used by the engineering theme.
 
 After intentionally changing a payload resource, regenerate checksums and
 review the resulting diff:
@@ -31,7 +38,7 @@ Build the deterministic release archive locally with:
 
 ```bash
 scripts/package-release.sh dist
-OMNIDOC_RELEASE_TAG=v1.0.1 scripts/package-release.sh dist
+OMNIDOC_RELEASE_TAG=v1.0.2 scripts/package-release.sh dist
 ```
 
 The command verifies all payload checksums, checks an optional tag against the

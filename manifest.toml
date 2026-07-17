@@ -1,5 +1,5 @@
 manifest_version = 1
-version = "1.0.1"
+version = "1.0.2"
 compatible_omnidoc = ">=1.3.0,<2.0.0"
 compatible_pandoc = ">=3.0,<4.0"
 checksum_algorithm = "sha256"
@@ -14,11 +14,15 @@ required_resources = [
   "pandoc/data/filters/include-code-files.lua",
   "pandoc/data/filters/display-math.lua",
   "pandoc/data/filters/admonition.lua",
-  "pandoc/data/templates/pantext.latex",
+  "pandoc/data/filters/emoji.lua",
   "pandoc/headers/engineering-book.tex",
+  "pandoc/headers/emoji.tex",
   "pandoc/crossref.yaml",
   "texmf/tex/common/omni.sty",
   "texmf/tex/common/omni-admonitions.sty",
   "texmf/tex/common/omni-engineering-book.sty",
+  "texmf/tex/latex/twemojis/twemojis.sty",
+  "texmf/tex/latex/twemojis/all-twemojis.pdf",
+  "texmf/tex/latex/twemojis/LICENSES.md",
   "themes/engineering-book.toml",
 ]

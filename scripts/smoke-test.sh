@@ -13,6 +13,7 @@ pandoc "$root/tests/filter-smoke.md" \
   --mathml \
   --lua-filter="$root/pandoc/data/filters/display-math.lua" \
   --lua-filter="$root/pandoc/data/filters/include-files.lua" \
+  --lua-filter="$root/pandoc/data/filters/emoji.lua" \
   --css="$root/pandoc/css/omnidoc-base.css" \
   --standalone --embed-resources --toc -t html5 -o "$work/smoke.html"
 
@@ -21,5 +22,8 @@ rg -q 'class="omni-display-math"' "$work/smoke.html"
 rg -q 'display="block"' "$work/smoke.html"
 rg -q 'href="#summary-1"' "$work/smoke.html"
 rg -q '\.omni-display-math' "$work/smoke.html"
+rg -q '🌟' "$work/smoke.html"
+
+"$root/scripts/check-pandoc-latex-template.sh"
 
 echo "omnidoc-libs filter smoke test passed"

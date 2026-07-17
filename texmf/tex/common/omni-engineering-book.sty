@@ -15,6 +15,7 @@
 \RequirePackage{booktabs}
 \RequirePackage{array}
 \RequirePackage{colortbl}
+\RequirePackage{listings}
 \RequirePackage{tikz}
 \RequirePackage{etoolbox}
 \RequirePackage{omni-admonitions}
@@ -29,6 +30,8 @@
 \definecolor{CircuitInk}{HTML}{243B53}
 \definecolor{CircuitPale}{HTML}{F2F7F8}
 \definecolor{CircuitLine}{HTML}{C9D8DD}
+\definecolor{CircuitCodeBackground}{HTML}{F4F7F9}
+\definecolor{CircuitCodeRule}{HTML}{D7E2E8}
 
 \setCJKmainfont{Noto Serif CJK SC}
 \setCJKsansfont{Noto Sans CJK SC}
@@ -38,6 +41,30 @@
 \setlist{nosep,leftmargin=2em,topsep=0.4em}
 \setlength{\emergencystretch}{3em}
 \setlength{\headheight}{20pt}
+
+% Long JSON, shell commands, URLs, and generated payloads must remain inside
+% the text block. `columns=fullflexible` avoids the exaggerated letter spacing
+% of listings' fixed-width column model, while `breaklines` permits wrapping
+% even when a quoted string contains no whitespace.
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{CircuitCodeBackground},
+  rulecolor=\color{CircuitCodeRule},
+  frame=single,
+  framesep=0.55em,
+  xleftmargin=0.35em,
+  xrightmargin=0.35em,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+  breakatwhitespace=false,
+  breakindent=1.5em,
+  showspaces=false,
+  showstringspaces=false,
+  showtabs=false,
+  tabsize=2,
+  upquote=true
+}
 
 \titleformat{\part}[display]
   {\centering\sffamily\bfseries\color{CircuitNavy}}
@@ -101,7 +128,7 @@
   \ifstrempty{\OmniBookSubtitle}{}{%
     {\sffamily\fontsize{17}{25}\selectfont \OmniBookSubtitle\par}}
   \vfill
-  {\sffamily\large \@author\par}
+  {\sffamily\large \def\and{\par}\@author\par}
   \vspace{3mm}
   {\sffamily\normalsize
     \ifstrempty{\OmniBookImprint}{\@date}{\OmniBookImprint}\par}

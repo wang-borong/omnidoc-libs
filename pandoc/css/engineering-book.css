@@ -142,6 +142,8 @@ code {
 }
 
 pre {
+  box-sizing: border-box;
+  max-width: 100%;
   overflow-x: auto;
   padding: 0.9em 1em;
   background: var(--pale);
@@ -157,8 +159,12 @@ pre code {
 }
 
 table {
+  display: block;
+  box-sizing: border-box;
   width: 100%;
+  max-width: 100%;
   margin: 1.2em 0;
+  overflow-x: auto;
   border-collapse: collapse;
   font-size: 0.88em;
 }
@@ -202,7 +208,20 @@ math[display="inline"] {
   display: inline-block;
   position: static;
   max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
   vertical-align: -0.14em;
+}
+
+/* Long inline or mixed prose/equation runs can exceed a narrow viewport.
+   Keep the overflow local to the paragraph instead of widening the book. */
+p:has(> math[display="inline"]),
+p:has(> .math.inline),
+p:has(> math[display="block"]),
+p:has(> .math.display) {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* Keep paginated EPUB engines from detaching lists from document flow. */

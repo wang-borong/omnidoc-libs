@@ -183,6 +183,45 @@ local function proc_image(image)
       image.src = pdf_path
       return image
     end
+
+    -- XeLaTeX's svg package normally requires shell escape and writes
+    -- converter side files beside the document. Convert an SVG without a
+    -- checked-in PDF sibling into Pandoc's media bag instead. The hashed name
+    -- is deterministic, keeps source trees clean, and lets the LaTeX writer
+    -- consume a normal PDF image from its temporary media directory.
+    if FORMAT:match('latex') then
+      local fetched, mime, svg = pcall(pandoc.mediabag.fetch, image.src)
+      if not fetched or not svg then
+        error('Cannot read SVG image for PDF conversion: ' .. image.src ..
+              '. Add the resource path or provide a same-basename PDF sibling.')
+      end
+      local converted, pdf_data = pcall(
+        pandoc.pipe,
+        'rsvg-convert',
+        {'--format=pdf'},
+        svg
+      )
+      if not converted then
+        -- Some legitimate engineering diagrams embed high-resolution raster
+        -- data and exceed libxml's default parser buffer. Retry only after the
+        -- bounded conversion failed; this keeps the normal path conservative
+        -- while still supporting those large, local source assets.
+        converted, pdf_data = pcall(
+          pandoc.pipe,
+          'rsvg-convert',
+          {'--unlimited', '--format=pdf'},
+          svg
+        )
+      end
+      if not converted or not pdf_data then
+        error('Cannot convert SVG image for PDF output: ' .. image.src ..
+              '. Install rsvg-convert or provide a same-basename PDF sibling.')
+      end
+      local generated = 'omnidoc-svg-' .. pandoc.sha1(svg) .. '.pdf'
+      pandoc.mediabag.insert(generated, 'application/pdf', pdf_data)
+      image.src = generated
+      return image
+    end
   end
 
   -- Skip images that are already in figures/ or images/ directories
