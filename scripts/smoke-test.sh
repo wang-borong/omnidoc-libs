@@ -41,9 +41,10 @@ while (($#)); do
 done
 stem="$(basename "${source%.*}")"
 test "$format" = svg
-cat >"$output/$stem.svg" <<'SVG'
+label="${BITFIELD_LABEL:-bitfield smoke}"
+cat >"$output/$stem.svg" <<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24">
-  <text x="4" y="17">bitfield smoke</text>
+  <text x="4" y="17">$label</text>
 </svg>
 SVG
 EOF
@@ -63,6 +64,18 @@ EOF
 )
 rg -q 'data:image/svg\+xml;base64' "$work/bitfield.html"
 rg -q 'Bitfield smoke' "$work/bitfield.html"
+rg -q 'bitfield smoke' "$work/figures/fig-smoke.svg"
+
+# A stable figure identifier must not preserve stale rendered bytes when the
+# fenced diagram source or renderer output changes.
+(
+  cd "$work"
+  BITFIELD_LABEL="bitfield updated" OMNIDOC_BIN="$work/fake-omnidoc" \
+    pandoc bitfield.md \
+      --lua-filter="$root/pandoc/data/filters/diagram-generator.lua" \
+      --standalone --embed-resources -t html5 -o bitfield-updated.html
+)
+rg -q 'bitfield updated' "$work/figures/fig-smoke.svg"
 
 "$root/scripts/check-pandoc-latex-template.sh"
 

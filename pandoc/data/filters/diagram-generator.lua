@@ -494,10 +494,12 @@ local function write_binary_data_to_file(file_path, binary_data)
   return true
 end
 
---- Create directory if needed and write file (if it doesn't exist)
+--- Create directory if needed and write file when its content changed
 ---
 --- This function creates the figures directory if it doesn't exist and
---- writes the image file only if it doesn't already exist (for caching).
+--- avoids rewriting identical image data. Identifier-based filenames are
+--- stable, so merely checking for existence would leave stale diagrams after
+--- the source block changes.
 ---
 --- @param directory string Directory path
 --- @param file_name string File name
@@ -518,14 +520,20 @@ local function create_directory_and_write_file(directory, file_name, binary_data
     end
   end
 
-  -- Write file only if it doesn't exist (cache optimization)
+  -- Preserve the existing file only when it already contains the rendered
+  -- bytes. A fixed Pandoc identifier deliberately produces a fixed filename,
+  -- but it must not turn that filename into a stale content cache.
   local existing = io.open(full_path, "rb")
   if existing then
+    local existing_data = existing:read("*all")
     existing:close()
-  else
-    if not write_binary_data_to_file(full_path, binary_data) then
-      return false
+    if existing_data == binary_data then
+      return true
     end
+  end
+
+  if not write_binary_data_to_file(full_path, binary_data) then
+    return false
   end
 
   return true
