@@ -24,6 +24,46 @@ rg -q 'href="#summary-1"' "$work/smoke.html"
 rg -q '\.omni-display-math' "$work/smoke.html"
 rg -q '🌟' "$work/smoke.html"
 
+cat >"$work/fake-omnidoc" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+source="$3"
+format="svg"
+output="."
+shift 3
+while (($#)); do
+  case "$1" in
+    --format) format="$2"; shift 2 ;;
+    --output) output="$2"; shift 2 ;;
+    --force) shift ;;
+    *) shift ;;
+  esac
+done
+stem="$(basename "${source%.*}")"
+test "$format" = svg
+cat >"$output/$stem.svg" <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="24" viewBox="0 0 120 24">
+  <text x="4" y="17">bitfield smoke</text>
+</svg>
+SVG
+EOF
+chmod +x "$work/fake-omnidoc"
+
+cat >"$work/bitfield.md" <<'EOF'
+```{.bitfield #fig-smoke caption="Bitfield smoke"}
+{"entries":[{"name":"VALUE","bits":7},{"name":"READY","bits":1}]}
+```
+EOF
+
+(
+  cd "$work"
+  OMNIDOC_BIN="$work/fake-omnidoc" pandoc bitfield.md \
+    --lua-filter="$root/pandoc/data/filters/diagram-generator.lua" \
+    --standalone --embed-resources -t html5 -o bitfield.html
+)
+rg -q 'data:image/svg\+xml;base64' "$work/bitfield.html"
+rg -q 'Bitfield smoke' "$work/bitfield.html"
+
 "$root/scripts/check-pandoc-latex-template.sh"
 
 echo "omnidoc-libs filter smoke test passed"

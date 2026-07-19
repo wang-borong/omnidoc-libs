@@ -8,6 +8,7 @@ It supports multiple diagram generation engines:
   - TikZ: LaTeX graphics
   - Python: Custom image generation scripts
   - Asymptote: Mathematical graphics
+  - Bitfield: OmniDoc JSON bitfield descriptions
 
 Features:
   - Automatic format selection based on output format (SVG, PNG, PDF)
@@ -29,6 +30,16 @@ Usage:
   }
   ```
 
+  ```{.bitfield caption="Register layout" width="100%"}
+  {
+    "bits": 8,
+    "entries": [
+      {"name": "VALUE", "bits": 7},
+      {"name": "READY", "bits": 1}
+    ]
+  }
+  ```
+
 Metadata options:
   - plantuml_path / plantumlPath: Path to PlantUML executable
   - inkscape_path / inkscapePath: Path to Inkscape executable
@@ -38,6 +49,7 @@ Metadata options:
   - dot_path / dotPath: Path to Graphviz dot executable
   - pdflatex_path / pdflatexPath: Path to pdflatex executable
   - asymptote_path / asymptotePath: Path to Asymptote executable
+  - omnidoc_path / omnidocPath: Path to the OmniDoc executable
 
 Copyright: © 2018-2021 John MacFarlane <jgm@berkeley.edu>,
            2018 Florian Schätzig <florian@schaetzig.de>,
@@ -92,11 +104,14 @@ end
 local dot_path = os.getenv("DOT") or "dot"
 local pdflatex_path = os.getenv("PDFLATEX") or "pdflatex"
 local asymptote_path = os.getenv("ASYMPTOTE") or "asy"
+local omnidoc_path = os.getenv("OMNIDOC_BIN") or "omnidoc"
 
 -- Output format and MIME type
 -- Default is SVG (vector graphics), but changes based on output format
 local filetype = "svg"
 local mimetype = "image/svg+xml"
+local bitfield_filetype = "svg"
+local bitfield_mimetype = "image/svg+xml"
 
 -- Determine output format based on pandoc output format
 -- Some formats don't support SVG well, so we use PNG or PDF instead
@@ -106,6 +121,11 @@ if FORMAT == "docx" or FORMAT == "pptx" or FORMAT == "rtf" then
 elseif FORMAT == "pdf" or FORMAT == "latex" then
   filetype = "pdf"
   mimetype = "application/pdf"
+end
+
+if FORMAT == "pdf" or FORMAT == "latex" then
+  bitfield_filetype = "pdf"
+  bitfield_mimetype = "application/pdf"
 end
 
 -- ============================================================================
@@ -146,6 +166,9 @@ function Meta(meta)
   asymptote_path = stringify(
     meta.asymptote_path or meta.asymptotePath or asymptote_path
   )
+  omnidoc_path = stringify(
+    meta.omnidoc_path or meta.omnidocPath or omnidoc_path
+  )
   
   return nil
 end
@@ -174,6 +197,42 @@ end
 --- @return string|nil The generated image data, or nil on error
 local function graphviz(code, filetype)
   return pandoc.pipe(dot_path, {"-T" .. filetype}, code)
+end
+
+--- Render an OmniDoc bitfield JSON code block through the native renderer.
+--- Reusing the CLI keeps fenced blocks and standalone JSON files on the same
+--- schema, validation, and SVG layout implementation.
+local function bitfield(code, output_type)
+  return with_temporary_directory("omnidoc-bitfield", function(tmpdir)
+    local source = tmpdir .. "/bitfield.json"
+    local output = tmpdir .. "/bitfield." .. output_type
+    local file = assert(io.open(source, "wb"))
+    file:write(code)
+    file:close()
+
+    local command = omnidoc_path
+    local args = {
+      "figure", "bitfield", source,
+      "--format", output_type,
+      "--output", tmpdir,
+      "--force"
+    }
+    if package.config:sub(1, 1) == "/" then
+      command = "env"
+      args = {
+        "-u", "OMNIDOC_LATEX_RECORDER_ENGINE",
+        "-u", "OMNIDOC_LATEX_RECORDER_DEPFILE",
+        omnidoc_path,
+        table.unpack(args)
+      }
+    end
+    pandoc.pipe(command, args, "")
+
+    local rendered = assert(io.open(output, "rb"))
+    local data = rendered:read("*all")
+    rendered:close()
+    return data
+  end)
 end
 
 --- LaTeX template for TikZ compilation
@@ -483,6 +542,7 @@ local converters = {
   tikz = tikz2image,
   py2image = py2image,
   asymptote = asymptote,
+  bitfield = bitfield,
 }
 
 --- Get the converter function for a code block class
@@ -498,10 +558,10 @@ end
 --- @param block table The CodeBlock element
 --- @param converter function The converter function to use
 --- @return string|nil Binary image data, or nil on error
-local function generate_image(block, converter)
+local function generate_image(block, converter, output_type)
   -- Call the converter to generate the image
   local success, img = pcall(converter, block.text,
-                             filetype, block.attributes["additionalPackages"] or nil)
+                             output_type, block.attributes["additionalPackages"] or nil)
 
   -- Handle errors
   if not (success and img) then
@@ -518,13 +578,13 @@ end
 --- @param block table The CodeBlock element
 --- @param img_data string Binary image data
 --- @return string The filename
-local function generate_filename(block, img_data)
+local function generate_filename(block, img_data, output_type)
   -- Use identifier if present, otherwise hash
-  if block.identifier then
+  if block.identifier and block.identifier ~= "" then
     local id = block.identifier:gsub('.*:', '', 1)
-    return id .. '.' .. filetype
+    return id .. '.' .. output_type
   else
-    return pandoc.sha1(img_data) .. "." .. filetype
+    return pandoc.sha1(img_data) .. "." .. output_type
   end
 end
 
@@ -532,12 +592,12 @@ end
 ---
 --- @param fname string The filename
 --- @param img_data string Binary image data
-local function save_image(fname, img_data)
+local function save_image(fname, img_data, media_type)
   -- Write image file to figures directory
   create_directory_and_write_file('figures', fname, img_data)
 
   -- Store in media bag for embedded resources
-  pandoc.mediabag.insert(fname, mimetype, img_data)
+  pandoc.mediabag.insert(fname, media_type, img_data)
 end
 
 --- Create image/figure element for Pandoc 2.x
@@ -588,6 +648,7 @@ end
 --- - tikz: TikZ graphics
 --- - py2image: Python image generation
 --- - asymptote: Asymptote graphics
+--- - bitfield: OmniDoc bitfield JSON
 ---
 --- @param block table The CodeBlock element
 --- @return table|nil The processed block (Image or Figure), or nil if unchanged
@@ -599,14 +660,17 @@ function CodeBlock(block)
   end
 
   -- Generate the image
-  local img_data = generate_image(block, converter)
+  local is_bitfield = block.classes[1] == "bitfield"
+  local output_type = is_bitfield and bitfield_filetype or filetype
+  local media_type = is_bitfield and bitfield_mimetype or mimetype
+  local img_data = generate_image(block, converter, output_type)
   if not img_data then
     return nil
   end
 
   -- Generate filename and save image
-  local fname = generate_filename(block, img_data)
-  save_image(fname, img_data)
+  local fname = generate_filename(block, img_data, output_type)
+  save_image(fname, img_data, media_type)
 
   -- Process caption
   local caption = block.attributes.caption and

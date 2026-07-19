@@ -1,5 +1,27 @@
 ## Filters 使用
 
+### diagram-generator.lua: bitfield blocks
+
+OmniDoc bitfield JSON can be embedded directly in Markdown:
+
+````markdown
+```{.bitfield #fig-control caption="Control word" width="100%"}
+{
+  "bits": 8,
+  "entries": [
+    { "name": "VALUE", "bits": 7 },
+    { "name": "READY", "bits": 1 }
+  ]
+}
+```
+````
+
+The filter invokes the native `omnidoc figure bitfield` renderer. PDF and
+LaTeX writers receive PDF artwork; other writers receive SVG. Set
+`OMNIDOC_BIN`, or metadata `omnidoc_path`/`omnidocPath`, when the desired
+binary is not the first `omnidoc` on `PATH`. OmniDoc project builds inject the
+path of their own running executable automatically.
+
 ### include-code-files.lua
 
 ```sh
