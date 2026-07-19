@@ -11,7 +11,7 @@ omnidoc theme validate engineering-book
 
 ## Engineering textbook
 
-The engineering textbook theme provides matching PDF, HTML, and EPUB styles.
+The engineering textbook theme provides matching PDF, HTML, EPUB, and PPTX styles.
 
 Select the bundle once in `.omnidoc.toml`:
 
@@ -22,12 +22,25 @@ version = "1"
 compatibility = "readium"
 ```
 
-OmniDoc resolves the matching HTML/EPUB CSS, Lua filters, and PDF header from
-the bundle manifest. PDF generation intentionally uses Pandoc's built-in,
+OmniDoc resolves the matching HTML/EPUB CSS, Lua filters, PDF header, and PPTX
+reference deck from the bundle manifest. PDF generation intentionally uses
+Pandoc's built-in,
 version-matched LaTeX template; the engineering design is injected through the
 header and `omni-engineering-book.sty`. HTML and EPUB use the same responsive typography,
 admonition styling, MathML layout, tables, code blocks, and dark mode. Desktop
 HTML is centered at a maximum reading width of 56rem.
+
+Presentation projects use the themed reference deck automatically:
+
+```bash
+omnidoc build --to pptx
+```
+
+Set the deck title in document metadata and use level-2 headings for individual
+slides (`--slide-level=2`). Level-1 headings remain available as section divider
+slides. The reference deck supplies the engineering palette, CJK-aware fonts,
+slide layouts, and a consistent accent bar while keeping text and diagrams
+editable in PowerPoint-compatible applications.
 
 Optional PDF cover fields can still be set from document metadata:
 

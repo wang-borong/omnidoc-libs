@@ -1,7 +1,7 @@
 # omnidoc-libs
 
-Shared Pandoc filters, stylesheets, templates, CSL files, images, and TeX
-packages used by OmniDoc.
+Shared Pandoc filters, stylesheets, templates, reference documents, CSL files,
+images, and TeX packages used by OmniDoc.
 
 ## Compatibility
 
