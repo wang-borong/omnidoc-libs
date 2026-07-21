@@ -24,6 +24,39 @@ rg -q 'href="#summary-1"' "$work/smoke.html"
 rg -q '\.omni-display-math' "$work/smoke.html"
 rg -q '🌟' "$work/smoke.html"
 
+block_css=(
+  "$root/pandoc/css/omnidoc-base.css"
+  "$root/pandoc/css/modules/engineering-tokens.css"
+  "$root/pandoc/css/engineering-book.css"
+  "$root/pandoc/css/modules/semantic-blocks.css"
+  "$root/pandoc/css/modules/code.css"
+  "$root/pandoc/css/modules/tables.css"
+  "$root/pandoc/css/modules/math.css"
+  "$root/pandoc/css/modules/figures.css"
+)
+block_css_args=()
+for css in "${block_css[@]}"; do
+  block_css_args+=(--css="$css")
+done
+
+pandoc "$root/tests/blocks-showcase.md" \
+  --lua-filter="$root/pandoc/data/filters/admonition.lua" \
+  "${block_css_args[@]}" \
+  --standalone --embed-resources -t html5 -o "$work/blocks-showcase.html"
+for kind in note tip important warning error question answer example exercise solution; do
+  rg -q "class=\"admonition $kind\"" "$work/blocks-showcase.html"
+  rg -q "data-kind=\"$kind\"" "$work/blocks-showcase.html"
+done
+
+pandoc "$root/tests/blocks-showcase.md" \
+  --lua-filter="$root/pandoc/data/filters/admonition.lua" \
+  "${block_css_args[@]}" \
+  --standalone -t epub3 -o "$work/blocks-showcase.epub"
+test -s "$work/blocks-showcase.epub"
+if command -v unzip >/dev/null; then
+  unzip -tqq "$work/blocks-showcase.epub"
+fi
+
 cat >"$work/fake-omnidoc" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail

@@ -81,6 +81,14 @@ TEXMFHOME="$root/texmf//:" pandoc "$work/probe.md" \
 
 pdfinfo "$work/probe.pdf" | rg -q '^Pages:[[:space:]]+[1-9][0-9]*$'
 
+TEXMFHOME="$root/texmf//:" pandoc "$root/tests/blocks-showcase.md" \
+  --standalone \
+  --lua-filter="$root/pandoc/data/filters/admonition.lua" \
+  --include-in-header="$root/pandoc/headers/engineering-book.tex" \
+  --pdf-engine=xelatex \
+  -o "$work/blocks-showcase.pdf"
+pdfinfo "$work/blocks-showcase.pdf" | rg -q '^Pages:[[:space:]]+[1-9][0-9]*$'
+
 TEXMFHOME="$root/texmf//:" pandoc "$work/probe.md" \
   --standalone \
   --lua-filter="$root/pandoc/data/filters/emoji.lua" \

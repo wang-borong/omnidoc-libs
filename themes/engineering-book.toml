@@ -6,8 +6,24 @@ compatible_omnidoc = ">=1.3.0,<2.0.0"
 compatibility = "readium"
 
 [resources]
-html_css = ["pandoc/css/engineering-book.css"]
-epub_css = ["pandoc/css/engineering-book.css"]
+html_css = [
+  "pandoc/css/modules/engineering-tokens.css",
+  "pandoc/css/engineering-book.css",
+  "pandoc/css/modules/semantic-blocks.css",
+  "pandoc/css/modules/code.css",
+  "pandoc/css/modules/tables.css",
+  "pandoc/css/modules/math.css",
+  "pandoc/css/modules/figures.css",
+]
+epub_css = [
+  "pandoc/css/modules/engineering-tokens.css",
+  "pandoc/css/engineering-book.css",
+  "pandoc/css/modules/semantic-blocks.css",
+  "pandoc/css/modules/code.css",
+  "pandoc/css/modules/tables.css",
+  "pandoc/css/modules/math.css",
+  "pandoc/css/modules/figures.css",
+]
 latex_packages = ["texmf/tex/common/omni-engineering-book.sty"]
 latex_headers = ["pandoc/headers/engineering-book.tex"]
 lua_filters = [

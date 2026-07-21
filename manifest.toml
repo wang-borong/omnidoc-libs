@@ -4,11 +4,18 @@ compatible_omnidoc = ">=1.5.0,<2.0.0"
 compatible_pandoc = ">=3.0,<4.0"
 checksum_algorithm = "sha256"
 checksum_file = "checksums.sha256"
-payload_roots = ["THEMES.md", "image", "pandoc", "texmf", "themes"]
+payload_roots = ["BLOCKS.md", "THEMES.md", "image", "pandoc", "texmf", "themes"]
 
 required_resources = [
+  "BLOCKS.md",
   "pandoc/css/omnidoc-base.css",
   "pandoc/css/engineering-book.css",
+  "pandoc/css/modules/engineering-tokens.css",
+  "pandoc/css/modules/semantic-blocks.css",
+  "pandoc/css/modules/code.css",
+  "pandoc/css/modules/tables.css",
+  "pandoc/css/modules/math.css",
+  "pandoc/css/modules/figures.css",
   "pandoc/data/epub.css",
   "pandoc/data/reference-docs/engineering-slides.pptx",
   "pandoc/data/filters/include-files.lua",
@@ -23,7 +30,9 @@ required_resources = [
   "pandoc/headers/emoji.tex",
   "pandoc/crossref.yaml",
   "texmf/tex/common/omni.sty",
-  "texmf/tex/common/omni-admonitions.sty",
+  "texmf/tex/common/omni-blocks.sty",
+  "texmf/tex/common/omni-blocks-core.sty",
+  "texmf/tex/common/omni-blocks-admonition.sty",
   "texmf/tex/common/omni-engineering-book.sty",
   "texmf/tex/latex/twemojis/twemojis.sty",
   "texmf/tex/latex/twemojis/all-twemojis.pdf",

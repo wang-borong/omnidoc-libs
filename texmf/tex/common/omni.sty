@@ -17,48 +17,7 @@
 \lstset{basicstyle=\small\ttfamily}
 
 \RequirePackage[usenames,dvipsnames]{xcolor}
-\RequirePackage{tcolorbox}
-
-\NewTColorBox{Note}{ O{Goldenrod} m !O{} }
-  {colback=#1!5!white,
-    colframe=#1!75!black,
-    colbacktitle=#1!50!white,coltitle=#1!40!black,
-    title={#2},#3}
-
-\NewTColorBox{Important}{ O{YellowOrange} m !O{} }
-  {colback=#1!5!white,
-    colframe=#1!75!black,
-    colbacktitle=#1!50!white,coltitle=#1!40!black,
-    title={#2},#3}
-
-\NewTColorBox{Hint}{ O{Aquamarine} m !O{} }
-  {colback=#1!5!white,
-    colframe=#1!75!black,
-    colbacktitle=#1!50!white,coltitle=#1!40!black,
-    title={#2},#3}
-
-\NewTColorBox{Warning}{ O{Apricot} m !O{} }
-  {colback=#1!5!white,
-    colframe=#1!75!black,
-    colbacktitle=#1!50!white,coltitle=#1!40!black,
-    title={#2},#3}
-
-\NewTColorBox{Error}{ O{Red} m !O{} }
-  {colback=#1!5!white,
-    colframe=#1!75!black,
-    colbacktitle=#1!50!white,coltitle=#1!40!black,
-    title={#2},#3}
-
-\newcounter{example-tcbox}
-\NewTColorBox[use counter=example-tcbox]{Example}{ O{SeaGreen} m d"" !O{} }
-  {colframe=#1!75!black,colback=#1!5!white,
-    fonttitle=\bfseries,title={例~\thetcbcounter~#2},
-    IfValueT={#3}{watermark text={#3}},#4}
-
-\NewTColorBox{Examine}{ O{LimeGreen} }
-  {colback=#1!5!white,
-    colframe=#1!75!black,
-    colbacktitle=#1!50!white,coltitle=#1!40!black,}
+\RequirePackage{omni-blocks}
 
 \RequirePackage{xparse}
 \RequirePackage{array}
