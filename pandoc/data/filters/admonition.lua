@@ -9,6 +9,7 @@
 --- semantic Div with a data-title attribute so that CSS can style it.
 
 local is_latex = FORMAT:match('latex') or FORMAT:match('beamer')
+local utils = pandoc.utils
 
 local function has_class(el, class_name)
   for _, class in ipairs(el.classes) do
@@ -46,7 +47,7 @@ function Meta(meta)
   local includes = meta['header-includes']
   if includes == nil then
     meta['header-includes'] = pandoc.MetaList({ package })
-  elseif includes.t == 'MetaList' then
+  elseif utils.type(includes) == 'List' then
     table.insert(includes, package)
   else
     meta['header-includes'] = pandoc.MetaList({ includes, package })

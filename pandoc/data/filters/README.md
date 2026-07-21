@@ -1,5 +1,36 @@
 ## Filters 使用
 
+### circuit and spiceplot blocks
+
+Circuit blocks execute trusted Schemdraw source. Keep substantial sources in
+versioned files and use `include-code` so OmniDoc tracks them as dependencies:
+
+````markdown
+```{.circuit #fig-divider include-code="schematics/divider.py"
+caption="Resistive divider" width="70%"}
+```
+````
+
+The source receives `d` (a configured `schemdraw.Drawing`) and `elm`
+(`schemdraw.elements`). PDF/LaTeX builds render PDF; portable outputs render
+SVG; DOCX/PPTX render PNG.
+
+Spiceplot blocks contain a JSON analysis specification, normally through
+`include-code`:
+
+````markdown
+```{.spiceplot #fig-rc include-code="sim/rc-step.json"
+caption="RC step response" width="80%"}
+```
+````
+
+Required JSON keys are `netlist`, `analysis`, and `traces`. Optional keys
+include `xlabel`, `ylabel`, `title`, `xscale`, `yscale`, `x_multiplier`,
+`figsize`, and `legend`. A trace is an ngspice expression string or an object
+such as `{"expr": "v(out)", "label": "Output"}`. Referenced netlists are
+recorded in the diagram filter depfile and participate in cache and lock input
+digests.
+
 ### diagram-generator.lua: bitfield blocks
 
 OmniDoc bitfield JSON can be embedded directly in Markdown:

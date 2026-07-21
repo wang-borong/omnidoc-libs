@@ -63,6 +63,46 @@ PANDOC_VERSION:must_be_at_least '2.7.3'
 
 local system = require 'pandoc.system'
 local utils = require 'pandoc.utils'
+local path = require 'pandoc.path'
+
+local depfile_path = nil
+local diagram_dependencies = {}
+
+local function record_dependency(file_path)
+  if not file_path or file_path == '' or file_path:find('[\r\n]') then
+    return
+  end
+  local resolved = file_path
+  if path.is_relative(resolved) then
+    resolved = path.join({system.get_working_directory(), resolved})
+  end
+  diagram_dependencies[path.normalize(resolved)] = true
+end
+
+local function write_depfile(doc)
+  if not depfile_path or depfile_path == '' then
+    return doc
+  end
+  local dependencies = {}
+  for dependency, _ in pairs(diagram_dependencies) do
+    table.insert(dependencies, dependency)
+  end
+  table.sort(dependencies)
+  local file, err = io.open(depfile_path, 'w')
+  if not file then
+    io.stderr:write(string.format(
+      "Warning: cannot write diagram depfile '%s': %s\n",
+      depfile_path, tostring(err)
+    ))
+    return doc
+  end
+  file:write('# omnidoc-depfile-v1\n')
+  for _, dependency in ipairs(dependencies) do
+    file:write(dependency, '\n')
+  end
+  file:close()
+  return doc
+end
 
 -- ============================================================================
 -- Helper Functions
@@ -105,6 +145,7 @@ local dot_path = os.getenv("DOT") or "dot"
 local pdflatex_path = os.getenv("PDFLATEX") or "pdflatex"
 local asymptote_path = os.getenv("ASYMPTOTE") or "asy"
 local omnidoc_path = os.getenv("OMNIDOC_BIN") or "omnidoc"
+local ngspice_path = os.getenv("NGSPICE") or "ngspice"
 
 -- Output format and MIME type
 -- Default is SVG (vector graphics), but changes based on output format
@@ -140,6 +181,9 @@ end
 --- @param meta table The document metadata
 --- @return table|nil The metadata (or nil if unchanged)
 function Meta(meta)
+  local generic_depfile = meta['omnidoc-depfile-diagram-generator']
+  depfile_path = generic_depfile and stringify(generic_depfile) or nil
+  diagram_dependencies = {}
   -- Update tool paths from metadata if provided
   plantuml_path = stringify(
     meta.plantuml_path or meta.plantumlPath or plantuml_path
@@ -169,8 +213,50 @@ function Meta(meta)
   omnidoc_path = stringify(
     meta.omnidoc_path or meta.omnidocPath or omnidoc_path
   )
+  ngspice_path = stringify(
+    meta.ngspice_path or meta.ngspicePath or ngspice_path
+  )
   
   return nil
+end
+
+local function helper_script(name)
+  local filter_dir = path.directory(PANDOC_SCRIPT_FILE or '')
+  return path.normalize(path.join({filter_dir, '..', 'scripts', name}))
+end
+
+local function python_helper(code, output_type, helper, suffix, extra_args)
+  return with_temporary_directory("omnidoc-diagram", function(tmpdir)
+    local source = path.join({tmpdir, 'source.' .. suffix})
+    local output = path.join({tmpdir, 'output.' .. output_type})
+    local source_file = assert(io.open(source, 'w'))
+    source_file:write(code)
+    source_file:close()
+    local args = {helper_script(helper), source, output}
+    for _, value in ipairs(extra_args or {}) do
+      table.insert(args, value)
+    end
+    pandoc.pipe(python_path, args, '')
+    local rendered = assert(io.open(output, 'rb'))
+    local data = rendered:read('*all')
+    rendered:close()
+    return data
+  end)
+end
+
+local function circuit(code, output_type)
+  return python_helper(code, output_type, 'render-circuit.py', 'py')
+end
+
+local function spiceplot(code, output_type)
+  local ok, spec = pcall(pandoc.json.decode, code)
+  if ok and type(spec) == 'table' and type(spec.netlist) == 'string' then
+    record_dependency(spec.netlist)
+  end
+  return python_helper(
+    code, output_type, 'render-spiceplot.py', 'json',
+    {'--ngspice', ngspice_path}
+  )
 end
 
 -- ============================================================================
@@ -551,6 +637,8 @@ local converters = {
   py2image = py2image,
   asymptote = asymptote,
   bitfield = bitfield,
+  circuit = circuit,
+  spiceplot = spiceplot,
 }
 
 --- Get the converter function for a code block class
@@ -703,4 +791,5 @@ end
 return {
   {Meta = Meta},
   {CodeBlock = CodeBlock},
+  {Pandoc = write_depfile},
 }

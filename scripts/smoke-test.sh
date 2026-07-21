@@ -77,6 +77,84 @@ rg -q 'bitfield smoke' "$work/figures/fig-smoke.svg"
 )
 rg -q 'bitfield updated' "$work/figures/fig-smoke.svg"
 
+# Exercise the native circuit and spiceplot blocks when their optional Python
+# dependencies and ngspice are available. The package smoke test remains
+# usable on minimal release hosts, while fully provisioned CI validates the
+# complete rendering path and dependency tracking contract.
+if command -v ngspice >/dev/null && \
+   MPLCONFIGDIR="$work/matplotlib" python3 -c 'import matplotlib, numpy, schemdraw' >/dev/null 2>&1; then
+  cat >"$work/divider.py" <<'EOF'
+d += elm.SourceV().up().label("5 V")
+d += elm.Resistor().right().label("1 kΩ")
+d += elm.Diode().down().label("D")
+d += elm.Line().left()
+EOF
+
+  cat >"$work/divider.cir" <<'EOF'
+OmniDoc spiceplot smoke test
+V1 in 0 5
+R1 in out 1k
+D1 out 0 DTEST
+.model DTEST D(Is=1e-15)
+.end
+EOF
+
+  cat >"$work/divider.json" <<'EOF'
+{
+  "netlist": "divider.cir",
+  "analysis": "dc V1 0 5 0.1",
+  "traces": [{"expr": "v(out)", "label": "V(out)"}],
+  "xlabel": "Input voltage (V)",
+  "ylabel": "Output voltage (V)"
+}
+EOF
+
+  cat >"$work/native-diagrams.md" <<'EOF'
+```{.circuit #fig-circuit-smoke include-code="divider.py" caption="Circuit smoke" width="65%"}
+```
+
+```{.spiceplot #fig-spiceplot-smoke include-code="divider.json" caption="Spiceplot smoke" width="80%"}
+```
+EOF
+
+  (
+    cd "$work"
+    MPLCONFIGDIR="$work/matplotlib" pandoc native-diagrams.md \
+      --metadata omnidoc-depfile-include-code-files="$work/include-code.d" \
+      --metadata omnidoc-depfile-diagram-generator="$work/diagram-generator.d" \
+      --lua-filter="$root/pandoc/data/filters/include-code-files.lua" \
+      --lua-filter="$root/pandoc/data/filters/diagram-generator.lua" \
+      --standalone --embed-resources -t html5 -o native-diagrams.html
+  )
+  rg -q 'Circuit smoke' "$work/native-diagrams.html"
+  rg -q 'Spiceplot smoke' "$work/native-diagrams.html"
+  test -s "$work/figures/fig-circuit-smoke.svg"
+  test -s "$work/figures/fig-spiceplot-smoke.svg"
+  rg -q "$work/divider.py" "$work/include-code.d"
+  rg -q "$work/divider.json" "$work/include-code.d"
+  rg -q "$work/divider.cir" "$work/diagram-generator.d"
+fi
+
+# OmniDoc-managed theme headers must be appended to, rather than replace, a
+# project's own header-includes metadata.
+cat >"$work/managed-header.tex" <<'EOF'
+\newcommand{\OmniManagedHeaderMarker}{managed}
+EOF
+cat >"$work/header-smoke.md" <<'EOF'
+---
+header-includes:
+  - \newcommand{\ProjectHeaderMarker}{project}
+---
+
+Header smoke.
+EOF
+pandoc "$work/header-smoke.md" \
+  --metadata omnidoc-default-latex-header="$work/managed-header.tex" \
+  --lua-filter="$root/pandoc/data/filters/latex-headers.lua" \
+  --standalone -t latex -o "$work/header-smoke.tex"
+rg -Fq '\newcommand{\ProjectHeaderMarker}{project}' "$work/header-smoke.tex"
+rg -Fq '\newcommand{\OmniManagedHeaderMarker}{managed}' "$work/header-smoke.tex"
+
 "$root/scripts/check-pandoc-latex-template.sh"
 
 echo "omnidoc-libs filter smoke test passed"
